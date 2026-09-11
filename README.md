@@ -25,12 +25,14 @@ développeur est active — c'est normal.
 
 ### Utilisation
 
-1. Aller sur https://bad-asso.fr et se connecter.
-2. Cliquer sur l'icône de l'extension.
-3. Ajuster si besoin la période et le rappel, puis **Exporter mon planning**.
+Une fois connecté sur https://bad-asso.fr, deux chemins mènent au même fichier.
 
-Le `.ics` se télécharge, et la liste des créneaux exportés s'affiche dans la
-popup pour vérification. Les réglages sont mémorisés d'une fois sur l'autre.
+**Le bouton flottant**, en bas à droite de chaque page BadAsso. Un clic, le
+`.ics` se télécharge. Période par défaut : 30 jours en arrière, 365 en avant,
+sans rappel. Le `×` le masque jusqu'au prochain chargement de page.
+
+**La popup**, via l'icône de l'extension, pour régler la période et les rappels,
+et revoir la liste des créneaux avant import. Les réglages y sont mémorisés.
 
 Aucun mot de passe n'est demandé ni stocké : l'extension réutilise la session
 déjà ouverte dans l'onglet.
@@ -93,10 +95,27 @@ Deux pièges rencontrés, tous deux traités dans le code :
 
 ### Pourquoi le monde MAIN
 
-L'extension injecte la collecte avec `world: "MAIN"`, c'est-à-dire dans le
-contexte JavaScript de la page elle-même. Depuis le monde isolé d'un content
-script, ou depuis la popup, la requête partirait de l'origine de l'extension et
-le cookie `PHPSESSID` (`SameSite=Lax`) ne serait pas joint.
+Toute la collecte tourne en `world: "MAIN"`, c'est-à-dire dans le contexte
+JavaScript de la page elle-même — la popup l'injecte via `chrome.scripting`, le
+bouton flottant y est déclaré directement dans le manifest. Depuis le monde
+isolé d'un content script, ou depuis la popup, la requête partirait de l'origine
+de l'extension et le cookie `PHPSESSID` (`SameSite=Lax`) ne serait pas joint.
+
+Contrepartie : un script en monde MAIN n'a accès à **aucune API d'extension**.
+D'où, côté bouton flottant, `sessionStorage` plutôt que `chrome.storage`, et un
+`<a download>` plutôt que `chrome.downloads`.
+
+Requiert Chrome 111+ ou Firefox 128+.
+
+### Isolation de l'interface injectée
+
+Le bouton flottant vit dans un **shadow DOM** avec `:host { all: initial }` : le
+CSS de BadAsso ne peut pas le déformer, et le nôtre ne déborde pas sur le site.
+Il est par ailleurs en `position: fixed` plutôt que greffé dans la mise en page
+du site — une refonte de BadAsso ne le cassera pas.
+
+Il ne s'affiche que si un identifiant adhérent est détectable dans la page, ce
+qui le restreint de fait aux pages où l'utilisateur est connecté.
 
 ---
 
@@ -104,7 +123,8 @@ le cookie `PHPSESSID` (`SameSite=Lax`) ne serait pas joint.
 
 ```
 extension/core.js      source unique : API BadAsso + génération ICS
-extension/popup.*      interface de l'extension
+extension/popup.*      popup de l'extension
+extension/inpage.js    bouton flottant injecté dans les pages BadAsso
 extension/icons/       icônes GÉNÉRÉES par tools/make-icons.py
 console/runner.js      lanceur du script console
 build.sh               core.js + runner.js -> badasso-export.js
@@ -168,4 +188,8 @@ versionnés : ne relancer qu'en cas de changement du dessin.
   membre, ce qui n'est pas souhaitable.
 - Les annulations ne se propagent pas aux évènements déjà importés.
 - `LOCATION` ne contient que le nom du gymnase, pas son adresse postale.
-- `world: "MAIN"` requiert Chrome 111 ou plus récent.
+- `world: "MAIN"` requiert Chrome 111+ ou Firefox 128+.
+- Le bouton flottant utilise la période par défaut ; pour la régler, passer par
+  la popup (les deux contextes ne partagent pas leur stockage).
+- Pas encore porté sur Firefox : il reste à ajouter `browser_specific_settings`,
+  un shim `browser`/`chrome`, et à gérer les permissions optionnelles.
