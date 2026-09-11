@@ -160,9 +160,13 @@ node test/test-ics.js
 des UID, échappement RFC 5545, pliage des lignes à 75 **octets** sans couper un
 caractère accentué en deux, rappels `VALARM`, couleurs, et cohérence du bundle.
 
-Le jeu de données `test/real-planning.json` provient d'une réponse réelle de
-l'endpoint, réduite aux champs effectivement consommés. La sortie a également
-été validée avec la bibliothèque Python `icalendar`.
+Le jeu de données `test/sample-planning.json` est **synthétique**, calqué sur
+la forme réelle des réponses de l'endpoint. Il est volontairement inventé : le
+planning réel d'un adhérent n'a rien à faire dans un dépôt public. Les cas
+délicats y sont couverts — les deux côtés du changement d'heure, les
+entraînements, et un créneau porteur d'un commentaire.
+
+La sortie a également été validée avec la bibliothèque Python `icalendar`.
 
 Pour inspecter le fichier généré :
 

@@ -1,6 +1,10 @@
 /*
- * Checks ICS generation against the real response of the "My planning"
- * endpoint (test/real-planning.json, reduced to the fields actually used).
+ * Checks ICS generation against a synthetic planning shaped exactly like the
+ * "My planning" endpoint response (test/sample-planning.json).
+ *
+ * The data is invented on purpose: no real member's bookings belong in a
+ * public repository. It is built to cover the tricky cases — both sides of the
+ * daylight saving switch, trainings, and a slot carrying a comment.
  *
  *   node test/test-ics.js
  */
@@ -10,7 +14,7 @@ const path = require("node:path");
 
 const api = require("../extension/core.js");
 const slots = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "real-planning.json"), "utf8")
+  fs.readFileSync(path.join(__dirname, "sample-planning.json"), "utf8")
 );
 
 let passed = 0;
@@ -55,9 +59,11 @@ check("local time is preserved, with no stray shift", () => {
   assert.ok(lines.includes("DTEND;TZID=Europe/Paris:20260914T133000"));
 });
 
-check("evening slot near the daylight saving switch", () => {
-  // 07/10: still CEST, the ICS must not convert the value.
-  assert.ok(lines.includes("DTSTART;TZID=Europe/Paris:20261007T193000"));
+check("local time holds on both sides of the daylight saving switch", () => {
+  // Europe/Paris goes back to CET on 2026-10-25. Carried by TZID, both values
+  // must be emitted verbatim, with no conversion either way.
+  assert.ok(lines.includes("DTSTART;TZID=Europe/Paris:20261021T200000")); // CEST
+  assert.ok(lines.includes("DTSTART;TZID=Europe/Paris:20261104T200000")); // CET
 });
 
 check("UID is stable and unique per slot", () => {
@@ -74,6 +80,10 @@ check("trainings are exported", () => {
 
 check("venue is filled in", () => {
   assert.ok(lines.some((l) => l.startsWith("LOCATION:Gymnase des Tilleuls")));
+});
+
+check("the slot comment lands in the description", () => {
+  assert.ok(lines.some((l) => l.includes("Terrain 3 indisponible")));
 });
 
 console.log("\nEscaping and folding");

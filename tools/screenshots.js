@@ -6,7 +6,7 @@
  * Writes dist/store/screenshot-{1,2}.png.
  *
  * The extension UI is rendered for real, from the actual source files, with
- * chrome.* stubbed and the network answered from test/real-planning.json — so
+ * chrome.* stubbed and the network answered from test/sample-planning.json — so
  * the screenshots cannot drift away from what the extension really looks like.
  *
  * Set CHROME_BIN to point at another Chrome or Chromium build.
@@ -39,20 +39,10 @@ function findChrome() {
   return found;
 }
 
-// Venue colors, as the API sends them.
-const TINTS = {
-  "Gymnase des Tilleuls": "#1a60d1",
-  "Halle Nord": "#f0a032",
-};
-
 function loadSlots() {
-  const slots = JSON.parse(
-    fs.readFileSync(path.join(ROOT, "test", "real-planning.json"), "utf8")
+  return JSON.parse(
+    fs.readFileSync(path.join(ROOT, "test", "sample-planning.json"), "utf8")
   );
-  slots.forEach((slot) => {
-    slot.loc_color = TINTS[slot.loc_name] || "#932079";
-  });
-  return slots;
 }
 
 /* --------------------------------------------------------------- templates */
