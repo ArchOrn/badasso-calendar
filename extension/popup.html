@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Exporter mon planning BadAsso</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fond: #ffffff;
+        --texte: #14161a;
+        --discret: #5c636e;
+        --bordure: #e3e6ea;
+        --accent: #1a60d1;
+        --accent-texte: #ffffff;
+        --erreur: #b3261e;
+        --succes: #1f7a3d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fond: #1b1d21;
+          --texte: #f2f3f5;
+          --discret: #a4abb6;
+          --bordure: #33373d;
+          --accent: #6f9fee;
+          --accent-texte: #12151a;
+          --erreur: #f2b8b5;
+          --succes: #7ddaa0;
+        }
+      }
+
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 16px;
+        background: var(--fond);
+        color: var(--texte);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      h1 {
+        margin: 0 0 2px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .sous-titre {
+        margin: 0 0 14px;
+        color: var(--discret);
+        font-size: 12px;
+      }
+
+      fieldset {
+        margin: 0 0 14px;
+        padding: 10px 12px;
+        border: 1px solid var(--bordure);
+        border-radius: 8px;
+      }
+      legend {
+        padding: 0 4px;
+        color: var(--discret);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .champ {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin: 6px 0;
+      }
+      .champ label {
+        font-size: 13px;
+      }
+      input[type="number"],
+      select {
+        width: 88px;
+        padding: 4px 6px;
+        border: 1px solid var(--bordure);
+        border-radius: 6px;
+        background: var(--fond);
+        color: var(--texte);
+        font: inherit;
+        font-size: 13px;
+      }
+
+      button {
+        width: 100%;
+        padding: 9px 12px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: var(--accent-texte);
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.55;
+        cursor: default;
+      }
+
+      #message {
+        margin-top: 12px;
+        font-size: 12.5px;
+      }
+      #message:empty {
+        margin-top: 0;
+      }
+      .erreur {
+        color: var(--erreur);
+      }
+      .succes {
+        color: var(--succes);
+      }
+
+      #liste {
+        max-height: 170px;
+        margin-top: 10px;
+        overflow-y: auto;
+        border-top: 1px solid var(--bordure);
+        font-size: 12px;
+      }
+      #liste div {
+        padding: 5px 0;
+        border-bottom: 1px solid var(--bordure);
+      }
+      #liste .quand {
+        color: var(--discret);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Mon planning badminton</h1>
+    <p class="sous-titre">Exporte tes créneaux réservés au format .ics</p>
+
+    <fieldset>
+      <legend>Période</legend>
+      <div class="champ">
+        <label for="avant">Jours en arrière</label>
+        <input id="avant" type="number" min="0" max="365" step="1" value="30" />
+      </div>
+      <div class="champ">
+        <label for="apres">Jours en avant</label>
+        <input id="apres" type="number" min="1" max="730" step="1" value="365" />
+      </div>
+      <div class="champ">
+        <label for="rappel">Rappel</label>
+        <select id="rappel">
+          <option value="0">Aucun</option>
+          <option value="30">30 min avant</option>
+          <option value="60">1 h avant</option>
+          <option value="120">2 h avant</option>
+          <option value="1440">1 jour avant</option>
+        </select>
+      </div>
+    </fieldset>
+
+    <button id="exporter">Exporter mon planning</button>
+
+    <div id="message"></div>
+    <div id="liste"></div>
+
+    <script src="core.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
