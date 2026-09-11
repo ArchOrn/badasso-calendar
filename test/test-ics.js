@@ -156,6 +156,35 @@ verifie("le nom de fichier est daté", () => {
   );
 });
 
+console.log("\nCouleur des gymnases");
+
+verifie("le hex du gymnase devient un nom CSS3", () => {
+  // RFC 7986 : COLOR n'accepte pas d'hexadécimal, seulement un nom CSS3.
+  assert.strictEqual(api.nomCouleurCss("#1a60d1"), "royalblue"); // Gymnase des Tilleuls
+  assert.strictEqual(api.nomCouleurCss("#f0a032"), "goldenrod"); // Halle Nord
+  assert.strictEqual(api.nomCouleurCss("#f46f4e"), "tomato"); // Gymnase du Parc
+});
+
+verifie("une couleur absente ou invalide ne produit rien", () => {
+  assert.strictEqual(api.nomCouleurCss(null), null);
+  assert.strictEqual(api.nomCouleurCss("bleu"), null);
+  assert.strictEqual(api.nomCouleurCss("#abc"), null);
+});
+
+verifie("COLOR est émis pour les créneaux colorés", () => {
+  const colores = api.construireIcs([
+    { id: 1, start: "2026-09-14T12:00", end: "2026-09-14T13:30", name: "Jeu libre", loc_color: "#1a60d1" },
+  ]).ics;
+  assert.ok(colores.includes("COLOR:royalblue"));
+});
+
+verifie("COLOR est omis quand le créneau n'a pas de couleur", () => {
+  const sansCouleur = api.construireIcs([
+    { id: 2, start: "2026-09-14T12:00", end: "2026-09-14T13:30", name: "Jeu libre" },
+  ]).ics;
+  assert.ok(!sansCouleur.includes("COLOR:"));
+});
+
 console.log("\nCohérence du bundle console");
 
 verifie("badasso-export.js est à jour vis-à-vis des sources", () => {

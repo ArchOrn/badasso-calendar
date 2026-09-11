@@ -6,17 +6,30 @@
   "use strict";
 
   var boutonExporter = document.getElementById("exporter");
-  var champAvant = document.getElementById("avant");
-  var champApres = document.getElementById("apres");
-  var champRappel = document.getElementById("rappel");
+  var libelleBouton = document.getElementById("libelle-bouton");
+  var iconeBouton = boutonExporter.querySelector("svg");
+  var sousTitre = document.getElementById("sous-titre");
   var zoneMessage = document.getElementById("message");
   var zoneListe = document.getElementById("liste");
 
   var PREFERENCES = ["avant", "apres", "rappel"];
 
+  var formatJour = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+
   function afficher(texte, classe) {
     zoneMessage.textContent = texte;
     zoneMessage.className = classe || "";
+  }
+
+  function enCours(actif) {
+    boutonExporter.disabled = actif;
+    iconeBouton.classList.toggle("rotation", actif);
+    libelleBouton.textContent = actif ? "Récupération…" : "Exporter mon planning";
   }
 
   function estSurBadAsso(url) {
@@ -27,30 +40,76 @@
     }
   }
 
-  function formaterQuand(creneau) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(creneau.start || "");
-    if (!m) return creneau.start || "";
-    var fin = /T(\d{2}):(\d{2})/.exec(creneau.end || "");
-    return (
-      m[3] + "/" + m[2] + " " + m[4] + "h" + m[5] + (fin ? "–" + fin[1] + "h" + fin[2] : "")
-    );
+  function decouper(local) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(local || ""));
+    return m ? { jour: m[1] + "-" + m[2] + "-" + m[3], heure: m[4] + "h" + m[5] } : null;
+  }
+
+  // Les dates arrivent en heure locale sans fuseau. On les relit en UTC pour
+  // les formater : le jour affiché reste ainsi celui du planning, quel que
+  // soit le fuseau de la machine.
+  function libelleJour(cle) {
+    var p = cle.split("-");
+    var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    return formatJour.format(d).replace(/\.$/, "");
   }
 
   function listerCreneaux(creneaux) {
     zoneListe.replaceChildren();
+
+    var parJour = new Map();
     creneaux
       .slice()
       .sort(function (a, b) {
         return String(a.start).localeCompare(String(b.start));
       })
       .forEach(function (c) {
+        var debut = decouper(c.start);
+        if (!debut) return;
+        if (!parJour.has(debut.jour)) parJour.set(debut.jour, []);
+        parJour.get(debut.jour).push(c);
+      });
+
+    parJour.forEach(function (duJour, cle) {
+      var entete = document.createElement("div");
+      entete.className = "jour";
+      entete.textContent = libelleJour(cle);
+      zoneListe.append(entete);
+
+      duJour.forEach(function (c) {
+        var debut = decouper(c.start);
+        var fin = decouper(c.end);
+
         var ligne = document.createElement("div");
-        var quand = document.createElement("span");
-        quand.className = "quand";
-        quand.textContent = formaterQuand(c) + " — ";
-        ligne.append(quand, document.createTextNode(c.name + " · " + (c.loc_name || "")));
+        ligne.className = "creneau";
+
+        var barre = document.createElement("span");
+        barre.className = "barre";
+        var teinte = c.loc_color || c.backgroundColor || c.color;
+        if (/^#[0-9a-f]{6}$/i.test(String(teinte || ""))) barre.style.background = teinte;
+        ligne.append(barre);
+
+        var corps = document.createElement("div");
+        corps.className = "corps";
+
+        var titre = document.createElement("div");
+        var heure = document.createElement("span");
+        heure.className = "heure";
+        heure.textContent = debut.heure + (fin ? "–" + fin.heure : "");
+        var nom = document.createElement("span");
+        nom.className = "nom";
+        nom.textContent = c.name || "";
+        titre.append(heure, nom);
+
+        var lieu = document.createElement("div");
+        lieu.className = "lieu";
+        lieu.textContent = c.loc_name || "";
+
+        corps.append(titre, lieu);
+        ligne.append(corps);
         zoneListe.append(ligne);
       });
+    });
   }
 
   function telecharger(ics, nom) {
@@ -69,9 +128,9 @@
   }
 
   async function exporter() {
-    boutonExporter.disabled = true;
+    enCours(true);
     zoneListe.replaceChildren();
-    afficher("Récupération en cours…");
+    afficher("Récupération de ton planning…", "attente");
 
     try {
       var onglets = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -85,9 +144,9 @@
         return;
       }
 
-      var avant = Math.max(0, parseInt(champAvant.value, 10) || 0);
-      var apres = Math.max(1, parseInt(champApres.value, 10) || 365);
-      var rappel = parseInt(champRappel.value, 10) || 0;
+      var avant = Math.max(0, parseInt(document.getElementById("avant").value, 10) || 0);
+      var apres = Math.max(1, parseInt(document.getElementById("apres").value, 10) || 365);
+      var rappel = parseInt(document.getElementById("rappel").value, 10) || 0;
 
       // La collecte tourne dans le monde MAIN : la requête part alors de la
       // page elle-même, donc avec son cookie de session. Depuis le monde
@@ -125,18 +184,17 @@
       await telecharger(sortie.ics, BadAsso.nomFichier());
 
       var nb = resultat.creneaux.length - sortie.ignores.length;
-      afficher(nb + (nb > 1 ? " créneaux exportés." : " créneau exporté."), "succes");
+      var texte = nb > 1 ? nb + " créneaux exportés" : nb + " créneau exporté";
       if (sortie.ignores.length) {
-        afficher(
-          nb + " créneaux exportés, " + sortie.ignores.length + " ignorés (dates illisibles).",
-          "succes"
-        );
+        texte += ", " + sortie.ignores.length + " ignoré(s) (dates illisibles)";
       }
+      afficher(texte + ".", "succes");
+      sousTitre.textContent = nb > 1 ? nb + " créneaux réservés" : nb + " créneau réservé";
       listerCreneaux(resultat.creneaux);
     } catch (err) {
       afficher(err && err.message ? err.message : String(err), "erreur");
     } finally {
-      boutonExporter.disabled = false;
+      enCours(false);
     }
   }
 

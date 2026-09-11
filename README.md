@@ -105,9 +105,11 @@ le cookie `PHPSESSID` (`SameSite=Lax`) ne serait pas joint.
 ```
 extension/core.js      source unique : API BadAsso + génération ICS
 extension/popup.*      interface de l'extension
+extension/icons/       icônes GÉNÉRÉES par tools/make-icons.py
 console/runner.js      lanceur du script console
 build.sh               core.js + runner.js -> badasso-export.js
 badasso-export.js      GÉNÉRÉ — ne pas éditer à la main
+tools/make-icons.py    régénère les icônes (sans dépendance)
 ```
 
 Après toute modification de `extension/core.js` ou `console/runner.js` :
@@ -125,9 +127,9 @@ silencieusement des sources.
 node test/test-ics.js
 ```
 
-21 assertions : structure du calendrier, conservation de l'heure locale, unicité
+25 assertions : structure du calendrier, conservation de l'heure locale, unicité
 des UID, échappement RFC 5545, pliage des lignes à 75 **octets** sans couper un
-caractère accentué en deux, rappels `VALARM`, et cohérence du bundle.
+caractère accentué en deux, rappels `VALARM`, couleurs, et cohérence du bundle.
 
 Le jeu de données `test/planning-reel.json` provient d'une réponse réelle de
 l'endpoint, réduite aux champs effectivement consommés. La sortie a également
@@ -139,6 +141,26 @@ Pour inspecter le fichier généré :
 DUMP=1 node test/test-ics.js
 ```
 
+## Couleur des gymnases
+
+L'API attribue une couleur à chaque gymnase (`loc_color`). Elle sert de repère
+visuel dans la popup, et alimente la propriété `COLOR` des évènements.
+
+Attention : la RFC 7986 définit `COLOR` avec un **nom de couleur CSS3**, pas un
+hexadécimal. Le code rapproche donc chaque teinte du nom le plus proche
+(`#1a60d1` → `royalblue`). Apple Calendar et Thunderbird en tiennent compte,
+Google Calendar ignore largement la couleur par évènement.
+
+## Icônes
+
+```sh
+python3 tools/make-icons.py
+```
+
+Le script assemble les PNG à la main (zlib + CRC), sans dépendance, avec un
+suréchantillonnage 4x pour lisser les bords. Les fichiers produits sont
+versionnés : ne relancer qu'en cas de changement du dessin.
+
 ## Limites connues
 
 - L'export est manuel : pas de synchronisation automatique. Un abonnement ICS
@@ -146,5 +168,4 @@ DUMP=1 node test/test-ics.js
   membre, ce qui n'est pas souhaitable.
 - Les annulations ne se propagent pas aux évènements déjà importés.
 - `LOCATION` ne contient que le nom du gymnase, pas son adresse postale.
-- L'extension n'a pas d'icône : Chrome affiche le placeholder par défaut.
 - `world: "MAIN"` requiert Chrome 111 ou plus récent.

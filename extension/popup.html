@@ -6,148 +6,352 @@
     <style>
       :root {
         color-scheme: light dark;
+
         --fond: #ffffff;
+        --fond-doux: #f6f7f9;
+        --fond-appui: #eef0f4;
         --texte: #14161a;
-        --discret: #5c636e;
-        --bordure: #e3e6ea;
+        --texte-doux: #5c636e;
+        --texte-tenu: #868d98;
+        --bordure: #e4e7ec;
+        --bordure-nette: #d3d8e0;
         --accent: #1a60d1;
+        --accent-fonce: #164fac;
         --accent-texte: #ffffff;
         --erreur: #b3261e;
-        --succes: #1f7a3d;
+        --erreur-fond: #fdeceb;
+        --succes: #18693a;
+        --succes-fond: #e8f5ed;
+
+        --rayon: 10px;
+        --rayon-petit: 7px;
       }
+
       @media (prefers-color-scheme: dark) {
         :root {
-          --fond: #1b1d21;
-          --texte: #f2f3f5;
-          --discret: #a4abb6;
-          --bordure: #33373d;
+          --fond: #1b1d22;
+          --fond-doux: #22252b;
+          --fond-appui: #2a2e35;
+          --texte: #f1f3f5;
+          --texte-doux: #a7aeb9;
+          --texte-tenu: #7e8794;
+          --bordure: #32363d;
+          --bordure-nette: #3f444c;
           --accent: #6f9fee;
-          --accent-texte: #12151a;
+          --accent-fonce: #86b0f4;
+          --accent-texte: #10131a;
           --erreur: #f2b8b5;
-          --succes: #7ddaa0;
+          --erreur-fond: #3b1f1e;
+          --succes: #86dca8;
+          --succes-fond: #16301f;
         }
       }
 
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        width: 320px;
+        width: 344px;
         margin: 0;
-        padding: 16px;
         background: var(--fond);
         color: var(--texte);
         font:
-          14px/1.5 system-ui,
+          13px/1.45 system-ui,
           -apple-system,
           "Segoe UI",
           sans-serif;
+        -webkit-font-smoothing: antialiased;
       }
 
-      h1 {
-        margin: 0 0 2px;
-        font-size: 15px;
+      /* ------------------------------------------------------------ entête */
+
+      .entete {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--bordure);
+      }
+
+      .entete svg {
+        flex: none;
+        width: 30px;
+        height: 30px;
+      }
+
+      .entete h1 {
+        margin: 0;
+        font-size: 14px;
         font-weight: 600;
-      }
-      .sous-titre {
-        margin: 0 0 14px;
-        color: var(--discret);
-        font-size: 12px;
+        letter-spacing: -0.01em;
       }
 
-      fieldset {
-        margin: 0 0 14px;
-        padding: 10px 12px;
-        border: 1px solid var(--bordure);
-        border-radius: 8px;
+      .entete p {
+        margin: 1px 0 0;
+        color: var(--texte-doux);
+        font-size: 11.5px;
       }
-      legend {
-        padding: 0 4px;
-        color: var(--discret);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+
+      /* ----------------------------------------------------------- réglages */
+
+      .reglages {
+        padding: 12px 16px 14px;
       }
-      .champ {
+
+      .rangee {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        margin: 6px 0;
+        gap: 10px;
+        min-height: 30px;
       }
-      .champ label {
-        font-size: 13px;
+
+      .rangee + .rangee {
+        margin-top: 6px;
       }
-      input[type="number"],
-      select {
-        width: 88px;
-        padding: 4px 6px;
-        border: 1px solid var(--bordure);
-        border-radius: 6px;
+
+      .rangee > label {
+        color: var(--texte-doux);
+        font-size: 12px;
+      }
+
+      .duo {
+        display: flex;
+        gap: 6px;
+      }
+
+      .encart {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .encart .unite {
+        position: absolute;
+        right: 8px;
+        color: var(--texte-tenu);
+        font-size: 11px;
+        pointer-events: none;
+      }
+
+      input[type="number"] {
+        width: 74px;
+        padding: 5px 26px 5px 8px;
+        border: 1px solid var(--bordure-nette);
+        border-radius: var(--rayon-petit);
         background: var(--fond);
         color: var(--texte);
         font: inherit;
-        font-size: 13px;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        -moz-appearance: textfield;
+      }
+
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        margin: 0;
+        -webkit-appearance: none;
+      }
+
+      select {
+        padding: 5px 8px;
+        border: 1px solid var(--bordure-nette);
+        border-radius: var(--rayon-petit);
+        background: var(--fond);
+        color: var(--texte);
+        font: inherit;
+        font-size: 12px;
+      }
+
+      input:focus-visible,
+      select:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      /* ------------------------------------------------------------ bouton */
+
+      .actions {
+        padding: 0 16px 14px;
       }
 
       button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
         width: 100%;
-        padding: 9px 12px;
+        padding: 10px 12px;
         border: 0;
-        border-radius: 8px;
+        border-radius: var(--rayon);
         background: var(--accent);
         color: var(--accent-texte);
         font: inherit;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
+        transition: background 0.12s ease;
       }
+
+      button:hover:not(:disabled) {
+        background: var(--accent-fonce);
+      }
+
       button:disabled {
-        opacity: 0.55;
+        opacity: 0.6;
         cursor: default;
       }
 
+      button svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .rotation {
+        animation: rotation 0.9s linear infinite;
+      }
+
+      @keyframes rotation {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .rotation {
+          animation: none;
+        }
+        button {
+          transition: none;
+        }
+      }
+
+      /* ----------------------------------------------------------- message */
+
       #message {
-        margin-top: 12px;
-        font-size: 12.5px;
+        margin: 0 16px 14px;
+        padding: 9px 11px;
+        border-radius: var(--rayon-petit);
+        font-size: 12px;
       }
+
       #message:empty {
-        margin-top: 0;
+        display: none;
       }
-      .erreur {
+
+      #message.erreur {
+        background: var(--erreur-fond);
         color: var(--erreur);
       }
-      .succes {
+
+      #message.succes {
+        background: var(--succes-fond);
         color: var(--succes);
       }
 
+      #message.attente {
+        background: var(--fond-doux);
+        color: var(--texte-doux);
+      }
+
+      /* ------------------------------------------------------------- liste */
+
       #liste {
-        max-height: 170px;
-        margin-top: 10px;
+        max-height: 264px;
         overflow-y: auto;
         border-top: 1px solid var(--bordure);
+        background: var(--fond-doux);
+      }
+
+      #liste:empty {
+        display: none;
+      }
+
+      .jour {
+        position: sticky;
+        top: 0;
+        padding: 8px 16px 4px;
+        background: var(--fond-doux);
+        color: var(--texte-tenu);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .creneau {
+        display: flex;
+        gap: 10px;
+        padding: 6px 16px 8px;
+      }
+
+      .creneau .barre {
+        flex: none;
+        width: 3px;
+        border-radius: 2px;
+        background: var(--bordure-nette);
+      }
+
+      .creneau .corps {
+        min-width: 0;
+      }
+
+      .creneau .heure {
+        color: var(--texte);
+        font-size: 12px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .creneau .nom {
+        margin-left: 6px;
+        color: var(--texte);
         font-size: 12px;
       }
-      #liste div {
-        padding: 5px 0;
-        border-bottom: 1px solid var(--bordure);
-      }
-      #liste .quand {
-        color: var(--discret);
+
+      .creneau .lieu {
+        margin-top: 1px;
+        overflow: hidden;
+        color: var(--texte-doux);
+        font-size: 11.5px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     </style>
   </head>
   <body>
-    <h1>Mon planning badminton</h1>
-    <p class="sous-titre">Exporte tes créneaux réservés au format .ics</p>
+    <header class="entete">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <!-- Couleurs figées, et non les jetons de thème : l'en-tête doit rester
+             identique à l'icône de la barre d'outils, qui ne s'inverse pas. -->
+        <rect width="100" height="100" rx="22" fill="#1a60d1" />
+        <path d="M19 13 H81 L65.5 62 H34.5 Z" fill="#ffffff" />
+        <path d="M50 62 V13 M42 62 L30 13 M58 62 L70 13" stroke="#1a60d1" stroke-width="1.7" />
+        <circle cx="50" cy="66.5" r="16.5" fill="#ffffff" />
+      </svg>
+      <div>
+        <h1>Mon planning badminton</h1>
+        <p id="sous-titre">Créneaux réservés au format .ics</p>
+      </div>
+    </header>
 
-    <fieldset>
-      <legend>Période</legend>
-      <div class="champ">
-        <label for="avant">Jours en arrière</label>
-        <input id="avant" type="number" min="0" max="365" step="1" value="30" />
+    <section class="reglages">
+      <div class="rangee">
+        <label for="avant">Période</label>
+        <div class="duo">
+          <span class="encart">
+            <input id="avant" type="number" min="0" max="365" step="1" value="30" />
+            <span class="unite">j&nbsp;←</span>
+          </span>
+          <span class="encart">
+            <input id="apres" type="number" min="1" max="730" step="1" value="365" />
+            <span class="unite">j&nbsp;→</span>
+          </span>
+        </div>
       </div>
-      <div class="champ">
-        <label for="apres">Jours en avant</label>
-        <input id="apres" type="number" min="1" max="730" step="1" value="365" />
-      </div>
-      <div class="champ">
+      <div class="rangee">
         <label for="rappel">Rappel</label>
         <select id="rappel">
           <option value="0">Aucun</option>
@@ -157,11 +361,21 @@
           <option value="1440">1 jour avant</option>
         </select>
       </div>
-    </fieldset>
+    </section>
 
-    <button id="exporter">Exporter mon planning</button>
+    <div class="actions">
+      <button id="exporter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12" />
+          <path d="m7 11 5 5 5-5" />
+          <path d="M4 20h16" />
+        </svg>
+        <span id="libelle-bouton">Exporter mon planning</span>
+      </button>
+    </div>
 
-    <div id="message"></div>
+    <div id="message" role="status"></div>
     <div id="liste"></div>
 
     <script src="core.js"></script>
