@@ -60,38 +60,44 @@ Projet indépendant, sans lien avec l'éditeur de BadAsso.
 
 ## Justification des permissions
 
-À renseigner dans l'onglet « Confidentialité » du tableau de bord. Chaque champ
-attend une phrase expliquant l'usage ; une justification vague est le premier
-motif de rejet.
+À renseigner dans l'onglet « Pratiques en matière de confidentialité ». Chaque
+champ attend une explication concrète de l'usage ; une justification vague est
+le premier motif de rejet.
 
-**`scripting`**
+**Code distant** — répondre d'abord « Non, je n'utilise pas de code distant ».
 
 ```
-L'extension exécute son code de récupération dans le contexte de la page bad-asso.fr afin que la requête bénéficie de la session de l'utilisateur. Sans cela, le cookie de session (SameSite=Lax) ne serait pas joint et la récupération du planning échouerait.
+Tout le code exécuté par l'extension est contenu dans son paquet. Aucun script, aucune feuille de style et aucun module n'est chargé depuis un serveur distant. L'extension n'émet qu'une seule requête réseau, vers bad-asso.fr ; la réponse est une donnée JSON, traitée comme telle et jamais exécutée.
+```
+
+**Autorisation d'hôte `https://bad-asso.fr/*`**
+
+```
+L'extension exporte vers un fichier iCalendar les créneaux de badminton que l'utilisateur a réservés sur bad-asso.fr. Elle accède à ce site pour deux choses : lire le planning de l'utilisateur via l'API du site, en réutilisant la session qu'il a lui-même ouverte, et afficher un bouton d'export sur les pages du site. bad-asso.fr est le seul domaine demandé, car c'est le seul où réside la donnée à exporter.
 ```
 
 **`downloads`**
 
 ```
-L'extension enregistre sur l'appareil de l'utilisateur le fichier .ics qu'elle vient de générer à partir de son planning.
+L'extension génère un fichier .ics à partir du planning de l'utilisateur, et doit l'enregistrer sur son appareil pour qu'il puisse l'importer dans son agenda. Cette autorisation sert uniquement à cet enregistrement, déclenché par un clic explicite de l'utilisateur.
+```
+
+**`scripting`**
+
+```
+L'extension exécute son code de récupération dans le contexte de la page bad-asso.fr, afin que la requête vers l'API du site parte avec le cookie de session de l'utilisateur. Ce cookie étant en SameSite=Lax, il ne serait pas joint à une requête émise depuis l'origine de l'extension, et la récupération du planning échouerait. Le code injecté est fourni dans le paquet de l'extension et ne s'exécute que sur bad-asso.fr.
 ```
 
 **`storage`**
 
 ```
-L'extension mémorise les préférences de l'utilisateur : la période à exporter et le délai de rappel. Ces réglages restent locaux.
+L'extension mémorise les préférences de l'utilisateur : la période à exporter, exprimée en nombre de jours avant et après la date du jour, et le délai de rappel à placer dans les évènements. Ces réglages restent locaux et ne sont jamais transmis.
 ```
 
-**Accès à l'hôte `https://bad-asso.fr/*`**
+**Objectif unique**
 
 ```
-L'extension lit le planning de l'utilisateur sur bad-asso.fr et y affiche un bouton d'export. C'est le seul site auquel elle accède, et le seul où réside la donnée exportée.
-```
-
-**Usage du code distant**
-
-```
-Non. Tout le code est contenu dans le paquet de l'extension.
+Exporter vers un fichier iCalendar les créneaux de badminton que l'utilisateur a réservés sur bad-asso.fr, afin qu'il puisse les importer dans son agenda.
 ```
 
 ---
