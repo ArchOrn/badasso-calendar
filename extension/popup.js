@@ -2,10 +2,19 @@
  * Extension popup: triggers collection in the BadAsso tab, builds the .ics
  * file and downloads it.
  *
+ * Works on Chrome and Firefox. `api` resolves to `browser` where it exists
+ * (Firefox) and to `chrome` otherwise; every call below is promise-based,
+ * which both support — Firefox through `browser.*`, Chrome through its MV3
+ * promise-returning APIs.
+ *
  * User-facing strings stay in French: they are read by club members.
  */
 (function () {
   "use strict";
+
+  var api = globalThis.browser || globalThis.chrome;
+
+  var ORIGINS = ["https://bad-asso.fr/*", "https://*.bad-asso.fr/*"];
 
   var exportButton = document.getElementById("export");
   var buttonLabel = document.getElementById("button-label");
@@ -116,19 +125,35 @@
     });
   }
 
-  function download(ics, name) {
-    var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    var url = URL.createObjectURL(blob);
-    return new Promise(function (resolve, reject) {
-      chrome.downloads.download({ url: url, filename: name, saveAs: false }, function (id) {
-        // The blob must stay alive until the download actually starts.
-        setTimeout(function () {
-          URL.revokeObjectURL(url);
-        }, 20000);
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-        else resolve(id);
-      });
-    });
+  async function download(ics, name) {
+    var url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+    try {
+      await api.downloads.download({ url: url, filename: name, saveAs: false });
+    } finally {
+      // The blob must stay alive until the download actually starts.
+      setTimeout(function () {
+        URL.revokeObjectURL(url);
+      }, 20000);
+    }
+  }
+
+  /*
+   * Firefox treats host permissions as revocable: the user can withdraw
+   * access to bad-asso.fr at any time from about:addons, and the extension
+   * then silently stops working. So check, and ask again from within the
+   * click — a permission request needs a user gesture.
+   *
+   * On Chrome the permission is granted at install and contains() is true,
+   * so this costs nothing.
+   */
+  async function ensureHostAccess() {
+    if (!api.permissions) return true;
+    try {
+      if (await api.permissions.contains({ origins: ORIGINS })) return true;
+      return await api.permissions.request({ origins: ORIGINS });
+    } catch (err) {
+      return true; // unsupported: let the export attempt speak for itself
+    }
   }
 
   async function exportPlanning() {
@@ -137,7 +162,15 @@
     say("Récupération de ton planning…", "pending");
 
     try {
-      var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!(await ensureHostAccess())) {
+        say(
+          "L'accès à bad-asso.fr a été refusé. Autorise-le dans la gestion des extensions, puis réessaie.",
+          "error"
+        );
+        return;
+      }
+
+      var tabs = await api.tabs.query({ active: true, currentWindow: true });
       var tab = tabs[0];
 
       if (!tab || !isBadAsso(tab.url)) {
@@ -155,13 +188,13 @@
       // Collection runs in the MAIN world: the request then leaves from the
       // page itself, carrying its session cookie. From a content script's
       // isolated world, the PHPSESSID cookie would not be attached.
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId: tab.id },
         world: "MAIN",
         files: ["core.js"],
       });
 
-      var results = await chrome.scripting.executeScript({
+      var results = await api.scripting.executeScript({
         target: { tabId: tab.id },
         world: "MAIN",
         func: function (a, b) {
@@ -204,15 +237,19 @@
   }
 
   async function restoreSettings() {
-    var stored = await chrome.storage.local.get(SETTINGS);
-    SETTINGS.forEach(function (key) {
-      if (stored[key] != null) document.getElementById(key).value = stored[key];
-    });
+    try {
+      var stored = await api.storage.local.get(SETTINGS);
+      SETTINGS.forEach(function (key) {
+        if (stored && stored[key] != null) document.getElementById(key).value = stored[key];
+      });
+    } catch (err) {
+      /* defaults stay in place */
+    }
   }
 
   SETTINGS.forEach(function (key) {
     document.getElementById(key).addEventListener("change", function (event) {
-      chrome.storage.local.set({ [key]: event.target.value });
+      api.storage.local.set({ [key]: event.target.value });
     });
   });
 

@@ -50,16 +50,20 @@ function loadSlots() {
 function stubScript(slots) {
   return `
 const FIXTURE = ${JSON.stringify(slots)};
+// Promise-based, like the real MV3 APIs the popup calls through its shim.
 window.chrome = {
-  storage: { local: { get: async () => ({}), set: () => {} } },
+  storage: { local: { get: async () => ({}), set: async () => {} } },
   tabs: { query: async () => [{ id: 1, url: "https://bad-asso.fr/adherent/planning" }] },
   scripting: {
     executeScript: async (o) =>
       o.func ? [{ result: { ok: true, memberId: "12345", slots: FIXTURE } }] : [{}],
   },
-  downloads: { download: (o, cb) => cb(1) },
+  downloads: { download: async () => 1 },
+  permissions: { contains: async () => true, request: async () => true },
   runtime: {},
 };
+// Surface any error so a blank screenshot cannot pass unnoticed.
+window.addEventListener("error", (e) => { document.title = "ERREUR: " + e.message; });
 `;
 }
 

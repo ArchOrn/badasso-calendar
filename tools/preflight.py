@@ -67,8 +67,26 @@ def main():
         names = bundle.namelist()
         check("manifest sits at the archive root", "manifest.json" in names)
         check("no dotfile", not any(n.split("/")[-1].startswith(".") for n in names))
+        check("the Firefox overlay is not shipped as a file", "manifest.firefox.json" not in names)
         check("no __MACOSX metadata", not any("__MACOSX" in n for n in names))
         check("size stays reasonable", sum(i.file_size for i in bundle.infolist()) < 5_000_000)
+
+    firefox_archive = ROOT / "dist" / f"badasso-calendar-{manifest['version']}-firefox.zip"
+    if firefox_archive.exists():
+        print("\nFirefox package")
+        bundle = zipfile.ZipFile(firefox_archive)
+        gecko = json.loads(bundle.read("manifest.json")).get("browser_specific_settings", {}).get("gecko", {})
+        check("add-on id declared", bool(gecko.get("id")), gecko.get("id", ""))
+        minimum = gecko.get("strict_min_version", "0")
+        check(
+            "strict_min_version >= 128 (MAIN-world content scripts)",
+            int(minimum.split(".")[0]) >= 128,
+            minimum,
+        )
+        check(
+            "the Firefox overlay is not shipped as a file",
+            "manifest.firefox.json" not in bundle.namelist(),
+        )
 
     print("\nRemote code (a frequent rejection cause)")
     sources = "".join(

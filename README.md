@@ -44,6 +44,38 @@ déjà ouverte dans l'onglet.
 
 ---
 
+## Firefox
+
+L'extension fonctionne sur Firefox 128 ou plus récent — la version qui a
+apporté les content scripts en monde MAIN, sur lesquels tout le dispositif
+repose.
+
+### Tester avant de soumettre
+
+```sh
+./tools/package.sh firefox   # -> dist/badasso-calendar-<version>-firefox.zip
+```
+
+1. Ouvrir `about:debugging#/runtime/this-firefox`.
+2. **Charger un module complémentaire temporaire**, puis choisir le `.zip`.
+3. Aller sur bad-asso.fr, se connecter, vérifier le bouton flottant et la popup.
+
+Le chargement temporaire disparaît au redémarrage de Firefox : c'est voulu,
+c'est le mode de test.
+
+### Différences avec Chrome
+
+- `browser_specific_settings.gecko` fournit l'identifiant du module et la
+  version minimale. Ces clés sont fusionnées à l'empaquetage depuis
+  `extension/manifest.firefox.json`, et n'existent pas dans le paquet Chrome.
+- Le code appelle les API via `globalThis.browser || globalThis.chrome`, en
+  style promesse — le seul style que les deux navigateurs honorent.
+- Firefox considère les permissions d'hôte comme **révocables** : l'utilisateur
+  peut retirer l'accès à bad-asso.fr depuis `about:addons` à tout moment. La
+  popup le détecte et redemande l'autorisation au clic.
+
+---
+
 ## Script console
 
 Pour tester sans installer, ou dépanner si l'extension pose problème.
