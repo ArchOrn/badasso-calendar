@@ -129,7 +129,7 @@ https://github.com/ArchOrn/badasso-calendar
 
 ## Ressources visuelles
 
-Générées par `./tools/screenshots.sh` dans `dist/store/` :
+Générées par `node tools/screenshots.js` dans `dist/store/` :
 
 | Fichier | Format | Usage |
 | --- | --- | --- |
