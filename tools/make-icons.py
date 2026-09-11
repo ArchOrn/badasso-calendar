@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Génère les icônes de l'extension : un volant blanc sur fond bleu arrondi.
+"""Génère les icônes de l'extension : un volant blanc sur fond violet arrondi.
 
     python3 tools/make-icons.py
 
@@ -16,7 +16,7 @@ import pathlib
 import struct
 import zlib
 
-ACCENT = (26, 96, 209)  # #1a60d1, le bleu Gymnase des Tilleuls du planning
+ACCENT = (147, 32, 121)  # #932079, le violet de la charte BadAsso
 BLANC = (255, 255, 255)
 SUPER = 4  # facteur de suréchantillonnage
 

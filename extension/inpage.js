@@ -7,7 +7,7 @@
  * Ni service worker, ni passage de messages.
  *
  * Contrepartie de ce monde : aucune API d'extension n'est accessible ici
- * (pas de chrome.storage, pas de chrome.downloads). D'où sessionStorage pour
+ * (pas de chrome.storage, pas de chrome.downloads). D'où localStorage pour
  * l'état, et un <a download> pour le fichier.
  *
  * L'interface vit dans un shadow DOM : le CSS de BadAsso ne peut pas la
@@ -18,9 +18,13 @@
 
   var JOURS_AVANT = 30;
   var JOURS_APRES = 365;
-  var CLE_MASQUE = "badasso-calendar:masque";
+  var CLE_REPLI = "badasso-calendar:replie";
   var ATTENTE_MAX = 8000; // détection de l'adhérent : durée totale
   var ATTENTE_PAS = 400;
+
+  // Violet BadAsso. Contraste avec du blanc : 7,7:1.
+  var MARQUE = "#932079";
+  var MARQUE_FONCE = "#7a1a65";
 
   // Diagnostic : sans ces traces, un bouton absent est indébogable.
   function tracer(raison) {
@@ -37,25 +41,27 @@
   if (window.__badassoBoutonPose) return;
   window.__badassoBoutonPose = true;
 
-  function masque() {
+  /*
+   * Le bouton ne disparaît jamais complètement : le « × » le replie en une
+   * pastille, qu'un clic redéploie. Un élément qui s'efface sans laisser de
+   * trace laisse l'utilisateur sans moyen de le retrouver.
+   *
+   * L'état tient dans localStorage, pour survivre d'une visite à l'autre.
+   */
+  function lireRepli() {
     try {
-      return sessionStorage.getItem(CLE_MASQUE) === "1";
+      return localStorage.getItem(CLE_REPLI) === "1";
     } catch (err) {
-      return false; // sessionStorage indisponible : on affiche, sans insister
+      return false; // stockage indisponible : on affiche déployé
     }
   }
 
-  function memoriserMasque() {
+  function ecrireRepli(replie) {
     try {
-      sessionStorage.setItem(CLE_MASQUE, "1");
+      localStorage.setItem(CLE_REPLI, replie ? "1" : "0");
     } catch (err) {
-      /* sans effet, le bouton réapparaîtra au prochain chargement */
+      /* sans effet : l'état ne sera pas retenu, le bouton reste utilisable */
     }
-  }
-
-  if (masque()) {
-    tracer("masqué pour cet onglet ; recharge la page pour le faire revenir.");
-    return;
   }
 
   /*
@@ -89,19 +95,23 @@
     "  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.18), 0 8px 24px rgba(16, 24, 40, 0.16);",
     "}",
     "button {",
-    "  margin: 0; border: 0; background: #1a60d1; color: #fff;",
+    "  margin: 0; border: 0; background: " + MARQUE + "; color: #fff;",
     "  font: inherit; cursor: pointer; transition: background 0.12s ease;",
     "}",
     ".principal { display: flex; align-items: center; gap: 8px; padding: 11px 14px; }",
-    ".principal:hover:not(:disabled) { background: #164fac; }",
+    ".principal:hover:not(:disabled) { background: " + MARQUE_FONCE + "; }",
     ".principal:disabled { cursor: default; opacity: 0.75; }",
     ".fermer {",
     "  width: 26px; padding: 0; font-size: 15px; line-height: 1;",
     "  color: rgba(255, 255, 255, 0.75);",
     "}",
-    ".fermer:hover { background: #164fac; color: #fff; }",
+    ".fermer:hover { background: " + MARQUE_FONCE + "; color: #fff; }",
     "button:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }",
     "svg { width: 15px; height: 15px; flex: none; }",
+    // Replié : plus que la pastille, le libellé et la croix s'effacent.
+    ".bulle.replie { border-radius: 999px; }",
+    ".bulle.replie .principal { padding: 10px; }",
+    ".bulle.replie .libelle, .bulle.replie .fermer { display: none; }",
     ".rotation { animation: tourne 0.9s linear infinite; }",
     "@keyframes tourne { to { transform: rotate(360deg); } }",
     ".etat {",
@@ -141,6 +151,7 @@
     // Balisage statique, écrit ici : aucune donnée du site n'y transite.
     principal.innerHTML = FLECHE;
     var libelle = document.createElement("span");
+    libelle.className = "libelle";
     libelle.textContent = "Exporter mon planning";
     principal.append(libelle);
 
@@ -148,8 +159,8 @@
     fermer.className = "fermer";
     fermer.type = "button";
     fermer.textContent = "×";
-    fermer.title = "Masquer jusqu'au prochain chargement";
-    fermer.setAttribute("aria-label", "Masquer le bouton d'export");
+    fermer.title = "Replier";
+    fermer.setAttribute("aria-label", "Replier le bouton d'export");
 
     var etat = document.createElement("div");
     etat.className = "etat";
@@ -159,7 +170,17 @@
     racine.append(style, etat, bulle);
     document.body.append(hote);
 
+    var replie = lireRepli();
     var effacement = null;
+
+    function appliquerRepli() {
+      bulle.classList.toggle("replie", replie);
+      principal.title = replie ? "Exporter mon planning BadAsso" : "";
+      principal.setAttribute(
+        "aria-label",
+        replie ? "Déplier le bouton d'export du planning" : "Exporter mon planning"
+      );
+    }
 
     function dire(texte, erreur, duree) {
       etat.textContent = texte;
@@ -223,11 +244,25 @@
       }
     }
 
-    principal.addEventListener("click", exporter);
-    fermer.addEventListener("click", function () {
-      memoriserMasque();
-      hote.remove();
+    // Replié, le bouton principal sert à redéployer ; déployé, il exporte.
+    principal.addEventListener("click", function () {
+      if (replie) {
+        replie = false;
+        ecrireRepli(false);
+        appliquerRepli();
+        return;
+      }
+      exporter();
     });
+
+    fermer.addEventListener("click", function () {
+      replie = true;
+      ecrireRepli(true);
+      appliquerRepli();
+      dire("Bouton replié. Clique sur la pastille pour le rouvrir.", false, 4000);
+    });
+
+    appliquerRepli();
   }
 
   // Sans identifiant adhérent, l'export ne peut pas aboutir : plutôt que

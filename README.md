@@ -29,7 +29,9 @@ Une fois connecté sur https://bad-asso.fr, deux chemins mènent au même fichie
 
 **Le bouton flottant**, en bas à droite de chaque page BadAsso. Un clic, le
 `.ics` se télécharge. Période par défaut : 30 jours en arrière, 365 en avant,
-sans rappel. Le `×` le masque jusqu'au prochain chargement de page.
+sans rappel. Le `×` le replie en pastille ; un clic sur la pastille le
+redéploie. Il ne disparaît jamais complètement — un élément qui s'efface sans
+laisser de trace laisse l'utilisateur sans moyen de le retrouver.
 
 **La popup**, via l'icône de l'extension, pour régler la période et les rappels,
 et revoir la liste des créneaux avant import. Les réglages y sont mémorisés.
@@ -171,6 +173,16 @@ hexadécimal. Le code rapproche donc chaque teinte du nom le plus proche
 (`#1a60d1` → `royalblue`). Apple Calendar et Thunderbird en tiennent compte,
 Google Calendar ignore largement la couleur par évènement.
 
+## Couleurs
+
+L'interface reprend le violet de la charte BadAsso, `#932079` — contraste de
+7,7:1 avec du texte blanc, donc confortablement au-dessus du seuil AA. Il est
+défini à trois endroits, à tenir synchronisés : les jetons `--accent` de
+`popup.html`, les constantes `MARQUE` de `inpage.js`, et `ACCENT` dans
+`tools/make-icons.py`.
+
+Les couleurs par créneau, elles, viennent de l'API et désignent le gymnase.
+
 ## Icônes
 
 ```sh
@@ -190,6 +202,7 @@ versionnés : ne relancer qu'en cas de changement du dessin.
 - `LOCATION` ne contient que le nom du gymnase, pas son adresse postale.
 - `world: "MAIN"` requiert Chrome 111+ ou Firefox 128+.
 - Le bouton flottant utilise la période par défaut ; pour la régler, passer par
-  la popup (les deux contextes ne partagent pas leur stockage).
+  la popup (les deux contextes ne partagent pas leur stockage : le monde MAIN
+  n'a pas accès à `chrome.storage`).
 - Pas encore porté sur Firefox : il reste à ajouter `browser_specific_settings`,
   un shim `browser`/`chrome`, et à gérer les permissions optionnelles.
