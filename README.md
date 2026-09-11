@@ -210,9 +210,14 @@ versionnés : ne relancer qu'en cas de changement du dessin.
 ## Publication
 
 ```sh
-./tools/package.sh        # -> dist/badasso-calendar-<version>.zip
-node tools/screenshots.js # -> dist/store/screenshot-{1,2}.png (1280x800)
+./tools/package.sh          # -> dist/badasso-calendar-<version>.zip
+node tools/screenshots.js   # -> dist/store/screenshot-{1,2}.png (1280x800)
+python3 tools/preflight.py  # contrôles avant soumission
 ```
+
+`preflight.py` vérifie le manifest, les icônes, la structure de l'archive,
+l'absence de code distant — motif de rejet fréquent — et les limites de
+longueur de la fiche.
 
 `STORE.md` contient les textes de la fiche, prêts à coller, ainsi que les
 justifications de permissions et les déclarations sur les données. `PRIVACY.md`
