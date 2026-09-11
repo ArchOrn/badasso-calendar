@@ -142,6 +142,17 @@ n'est pas mise en avant.
 
 ---
 
+## Versions
+
+La version vit dans `extension/manifest.json`, et `./tools/package.sh` en tire
+le nom de l'archive.
+
+Le store exige que chaque version téléversée soit **strictement supérieure** à
+la dernière publiée. On ne peut donc jamais redescendre après une première
+publication acceptée : incrémenter avant chaque soumission.
+
+---
+
 ## Visibilité
 
 **Non répertoriée** est recommandé pour un usage de club : l'extension

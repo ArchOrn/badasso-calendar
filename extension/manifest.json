@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BadAsso → Calendrier",
-  "version": "1.3.0",
+  "version": "1.0.0",
   "description": "Exporte tes créneaux de badminton réservés sur BadAsso vers un fichier .ics (Google Calendar, Apple Calendar, Outlook).",
   "permissions": [
     "scripting",
