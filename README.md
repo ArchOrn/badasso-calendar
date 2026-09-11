@@ -13,7 +13,10 @@ courant, un **script console** pour dépanner sans rien installer.
 
 ### Installation
 
-1. Télécharger ou cloner ce dépôt.
+1. Cloner le dépôt :
+   ```sh
+   git clone https://github.com/ArchOrn/badasso-calendar.git
+   ```
 2. Ouvrir `chrome://extensions`.
 3. Activer le **Mode développeur** (en haut à droite).
 4. Cliquer **Charger l'extension non empaquetée** et choisir le dossier
@@ -220,6 +223,11 @@ API `chrome.*` bouchonnées : elles ne peuvent pas s'écarter de ce que
 l'extension affiche réellement.
 
 `dist/` n'est pas versionné : tout s'y régénère.
+
+## Liens
+
+- Dépôt : https://github.com/ArchOrn/badasso-calendar
+- Politique de confidentialité : [PRIVACY.md](PRIVACY.md)
 
 ## Licence
 

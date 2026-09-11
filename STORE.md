@@ -115,10 +115,14 @@ Cocher les trois certifications :
 
 ## URL de la politique de confidentialité
 
-À renseigner une fois le dépôt publié. Par exemple :
+```
+https://github.com/ArchOrn/badasso-calendar/blob/main/PRIVACY.md
+```
+
+## URL du site officiel (facultatif mais utile en revue)
 
 ```
-https://github.com/<compte>/badasso-calendar/blob/main/PRIVACY.md
+https://github.com/ArchOrn/badasso-calendar
 ```
 
 ---
