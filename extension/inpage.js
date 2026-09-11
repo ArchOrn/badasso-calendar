@@ -7,7 +7,7 @@
  * Ni service worker, ni passage de messages.
  *
  * Contrepartie de ce monde : aucune API d'extension n'est accessible ici
- * (pas de chrome.storage, pas de chrome.downloads). D'où localStorage pour
+ * (pas de chrome.storage, pas de chrome.downloads). D'où sessionStorage pour
  * l'état, et un <a download> pour le fichier.
  *
  * L'interface vit dans un shadow DOM : le CSS de BadAsso ne peut pas la
@@ -19,9 +19,19 @@
   var JOURS_AVANT = 30;
   var JOURS_APRES = 365;
   var CLE_MASQUE = "badasso-calendar:masque";
+  var ATTENTE_MAX = 8000; // détection de l'adhérent : durée totale
+  var ATTENTE_PAS = 400;
+
+  // Diagnostic : sans ces traces, un bouton absent est indébogable.
+  function tracer(raison) {
+    console.info("[BadAsso] Bouton d'export non affiché — " + raison);
+  }
 
   // core.js est injecté juste avant ; en son absence, on ne fait rien.
-  if (!window.BadAsso) return;
+  if (!window.BadAsso) {
+    tracer("core.js n'est pas chargé (window.BadAsso absent).");
+    return;
+  }
 
   // Chrome peut réinjecter un content script (bfcache, navigations internes).
   if (window.__badassoBoutonPose) return;
@@ -43,12 +53,31 @@
     }
   }
 
-  if (masque()) return;
+  if (masque()) {
+    tracer("masqué pour cet onglet ; recharge la page pour le faire revenir.");
+    return;
+  }
 
-  // Sans identifiant adhérent, l'export ne peut pas aboutir : plutôt que
-  // d'afficher un bouton qui échouera, on s'abstient. Cela restreint de fait
-  // le bouton aux pages connectées.
-  if (!window.BadAsso.trouverAdhId()) return;
+  /*
+   * Sur les pages où le planning se charge en AJAX, l'identifiant adhérent
+   * n'est pas encore dans le DOM au moment où le content script s'exécute.
+   * On réessaie donc pendant quelques secondes avant d'abandonner.
+   */
+  function attendreAdhId() {
+    return new Promise(function (resolve) {
+      var trouve = window.BadAsso.trouverAdhId();
+      if (trouve) return resolve(trouve);
+
+      var echeance = Date.now() + ATTENTE_MAX;
+      var minuteur = setInterval(function () {
+        var id = window.BadAsso.trouverAdhId();
+        if (id || Date.now() > echeance) {
+          clearInterval(minuteur);
+          resolve(id || null);
+        }
+      }, ATTENTE_PAS);
+    });
+  }
 
   var STYLE = [
     ":host { all: initial; }",
@@ -95,103 +124,125 @@
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>';
 
-  var hote = document.createElement("div");
-  hote.setAttribute("data-badasso-calendar", "");
-  var racine = hote.attachShadow({ mode: "open" });
+  function poser() {
+    var hote = document.createElement("div");
+    hote.setAttribute("data-badasso-calendar", "");
+    var racine = hote.attachShadow({ mode: "open" });
 
-  var style = document.createElement("style");
-  style.textContent = STYLE;
+    var style = document.createElement("style");
+    style.textContent = STYLE;
 
-  var bulle = document.createElement("div");
-  bulle.className = "bulle";
+    var bulle = document.createElement("div");
+    bulle.className = "bulle";
 
-  var principal = document.createElement("button");
-  principal.className = "principal";
-  principal.type = "button";
-  // Balisage statique, écrit ici : aucune donnée du site n'y transite.
-  principal.innerHTML = FLECHE;
-  var libelle = document.createElement("span");
-  libelle.textContent = "Exporter mon planning";
-  principal.append(libelle);
+    var principal = document.createElement("button");
+    principal.className = "principal";
+    principal.type = "button";
+    // Balisage statique, écrit ici : aucune donnée du site n'y transite.
+    principal.innerHTML = FLECHE;
+    var libelle = document.createElement("span");
+    libelle.textContent = "Exporter mon planning";
+    principal.append(libelle);
 
-  var fermer = document.createElement("button");
-  fermer.className = "fermer";
-  fermer.type = "button";
-  fermer.textContent = "×";
-  fermer.title = "Masquer jusqu'au prochain chargement";
-  fermer.setAttribute("aria-label", "Masquer le bouton d'export");
+    var fermer = document.createElement("button");
+    fermer.className = "fermer";
+    fermer.type = "button";
+    fermer.textContent = "×";
+    fermer.title = "Masquer jusqu'au prochain chargement";
+    fermer.setAttribute("aria-label", "Masquer le bouton d'export");
 
-  var etat = document.createElement("div");
-  etat.className = "etat";
-  etat.setAttribute("role", "status");
+    var etat = document.createElement("div");
+    etat.className = "etat";
+    etat.setAttribute("role", "status");
 
-  bulle.append(principal, fermer);
-  racine.append(style, etat, bulle);
-  document.body.append(hote);
+    bulle.append(principal, fermer);
+    racine.append(style, etat, bulle);
+    document.body.append(hote);
 
-  var effacement = null;
+    var effacement = null;
 
-  function dire(texte, erreur, duree) {
-    etat.textContent = texte;
-    etat.classList.toggle("erreur", !!erreur);
-    clearTimeout(effacement);
-    if (duree) {
-      effacement = setTimeout(function () {
-        etat.textContent = "";
-      }, duree);
+    function dire(texte, erreur, duree) {
+      etat.textContent = texte;
+      etat.classList.toggle("erreur", !!erreur);
+      clearTimeout(effacement);
+      if (duree) {
+        effacement = setTimeout(function () {
+          etat.textContent = "";
+        }, duree);
+      }
     }
+
+    function occupe(actif) {
+      principal.disabled = actif;
+      principal.querySelector("svg").classList.toggle("rotation", actif);
+      libelle.textContent = actif ? "Récupération…" : "Exporter mon planning";
+    }
+
+    async function exporter() {
+      occupe(true);
+      dire("Récupération de ton planning…");
+
+      try {
+        var resultat = await window.BadAsso.collecter(JOURS_AVANT, JOURS_APRES);
+
+        if (!resultat.ok) {
+          dire(resultat.erreur, true, 9000);
+          return;
+        }
+        if (!resultat.creneaux.length) {
+          dire("Aucun créneau réservé sur la période.", true, 6000);
+          return;
+        }
+
+        var sortie = window.BadAsso.construireIcs(resultat.creneaux);
+        var nb = resultat.creneaux.length - sortie.ignores.length;
+        var nom = window.BadAsso.nomFichier();
+
+        var url = URL.createObjectURL(
+          new Blob([sortie.ics], { type: "text/calendar;charset=utf-8" })
+        );
+        var lien = document.createElement("a");
+        lien.href = url;
+        lien.download = nom;
+        document.body.append(lien);
+        lien.click();
+        lien.remove();
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 1000);
+
+        dire(
+          (nb > 1 ? nb + " créneaux exportés" : nb + " créneau exporté") + " — " + nom,
+          false,
+          6000
+        );
+      } catch (err) {
+        dire(err && err.message ? err.message : String(err), true, 9000);
+      } finally {
+        occupe(false);
+      }
+    }
+
+    principal.addEventListener("click", exporter);
+    fermer.addEventListener("click", function () {
+      memoriserMasque();
+      hote.remove();
+    });
   }
 
-  function occupe(actif) {
-    principal.disabled = actif;
-    principal.querySelector("svg").classList.toggle("rotation", actif);
-    libelle.textContent = actif ? "Récupération…" : "Exporter mon planning";
-  }
-
-  async function exporter() {
-    occupe(true);
-    dire("Récupération de ton planning…");
-
-    try {
-      var resultat = await window.BadAsso.collecter(JOURS_AVANT, JOURS_APRES);
-
-      if (!resultat.ok) {
-        dire(resultat.erreur, true, 9000);
-        return;
-      }
-      if (!resultat.creneaux.length) {
-        dire("Aucun créneau réservé sur la période.", true, 6000);
-        return;
-      }
-
-      var sortie = window.BadAsso.construireIcs(resultat.creneaux);
-      var nb = resultat.creneaux.length - sortie.ignores.length;
-      var nom = window.BadAsso.nomFichier();
-
-      var url = URL.createObjectURL(
-        new Blob([sortie.ics], { type: "text/calendar;charset=utf-8" })
+  // Sans identifiant adhérent, l'export ne peut pas aboutir : plutôt que
+  // d'afficher un bouton qui échouera, on s'abstient. Cela restreint de fait
+  // le bouton aux pages où l'utilisateur est connecté.
+  attendreAdhId().then(function (adhId) {
+    if (!adhId) {
+      tracer(
+        "identifiant adhérent introuvable dans cette page après " +
+          ATTENTE_MAX / 1000 +
+          " s. Si tu es bien connecté, c'est la détection qu'il faut corriger."
       );
-      var lien = document.createElement("a");
-      lien.href = url;
-      lien.download = nom;
-      document.body.append(lien);
-      lien.click();
-      lien.remove();
-      setTimeout(function () {
-        URL.revokeObjectURL(url);
-      }, 1000);
-
-      dire((nb > 1 ? nb + " créneaux exportés" : nb + " créneau exporté") + " — " + nom, false, 6000);
-    } catch (err) {
-      dire(err && err.message ? err.message : String(err), true, 9000);
-    } finally {
-      occupe(false);
+      return;
     }
-  }
-
-  principal.addEventListener("click", exporter);
-  fermer.addEventListener("click", function () {
-    memoriserMasque();
-    hote.remove();
+    console.debug("[BadAsso] Bouton d'export prêt (adhérent " + adhId + ").");
+    poser();
   });
 })();
