@@ -48,6 +48,12 @@ navigateur. Désinstaller l'extension les supprime.
 
 L'extension n'a accès à aucun autre site que `bad-asso.fr`.
 
+## Déclaration Firefox
+
+Le module déclare `data_collection_permissions: { required: ["none"] }` dans
+son manifest, conformément aux règles d'addons.mozilla.org : aucune donnée
+personnelle n'est collectée ni transmise.
+
 ## Code source
 
 Le code est intégralement consultable et vérifiable dans ce dépôt.

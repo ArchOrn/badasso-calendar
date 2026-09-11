@@ -65,9 +65,15 @@ c'est le mode de test.
 
 ### Différences avec Chrome
 
-- `browser_specific_settings.gecko` fournit l'identifiant du module et la
-  version minimale. Ces clés sont fusionnées à l'empaquetage depuis
-  `extension/manifest.firefox.json`, et n'existent pas dans le paquet Chrome.
+- `browser_specific_settings.gecko` fournit l'identifiant du module, la version
+  minimale, et `data_collection_permissions` — obligatoire sur AMO depuis
+  novembre 2025 pour tout nouveau module. L'extension ne transmettant aucune
+  donnée, la valeur déclarée est `{"required": ["none"]}`. Ces clés sont
+  fusionnées à l'empaquetage depuis `extension/manifest.firefox.json`, et
+  n'existent pas dans le paquet Chrome.
+
+  ⚠️ Une fois adoptée, cette clé doit figurer dans **toutes** les versions
+  suivantes : AMO ne permet pas de revenir en arrière.
 - Le code appelle les API via `globalThis.browser || globalThis.chrome`, en
   style promesse — le seul style que les deux navigateurs honorent.
 - Firefox considère les permissions d'hôte comme **révocables** : l'utilisateur

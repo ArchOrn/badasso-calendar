@@ -87,6 +87,14 @@ def main():
             "the Firefox overlay is not shipped as a file",
             "manifest.firefox.json" not in bundle.namelist(),
         )
+        # Required by AMO since November 2025, for new add-ons.
+        collection = gecko.get("data_collection_permissions", {})
+        required = collection.get("required", [])
+        check("data_collection_permissions.required is declared", bool(required), ", ".join(required))
+        check(
+            "\"none\" stands alone, as the schema demands",
+            required != ["none"] or len(required) == 1,
+        )
 
     print("\nRemote code (a frequent rejection cause)")
     sources = "".join(
