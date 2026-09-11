@@ -1,93 +1,95 @@
 /*
- * Bouton d'export injecté directement dans les pages BadAsso.
+ * Export button injected straight into BadAsso pages.
  *
- * Tourne en content script « monde MAIN », c'est-à-dire dans le contexte
- * JavaScript de la page : la requête part donc avec le cookie de session, et
- * tout se fait sur place — récupération, génération du .ics, téléchargement.
- * Ni service worker, ni passage de messages.
+ * Runs as a content script in the MAIN world, i.e. in the page's own
+ * JavaScript context: the request therefore carries the session cookie, and
+ * everything happens in place — fetching, building the .ics, downloading.
+ * No service worker, no message passing.
  *
- * Contrepartie de ce monde : aucune API d'extension n'est accessible ici
- * (pas de chrome.storage, pas de chrome.downloads). D'où localStorage pour
- * l'état, et un <a download> pour le fichier.
+ * The trade-off of that world: no extension API is reachable here (no
+ * chrome.storage, no chrome.downloads). Hence localStorage for state, and an
+ * <a download> for the file.
  *
- * L'interface vit dans un shadow DOM : le CSS de BadAsso ne peut pas la
- * déformer, et le nôtre ne peut pas déborder sur le site.
+ * The UI lives in a shadow DOM: BadAsso's CSS cannot distort it, and ours
+ * cannot leak onto the site.
+ *
+ * User-facing strings stay in French: they are read by club members.
  */
 (function () {
   "use strict";
 
-  var JOURS_AVANT = 30;
-  var JOURS_APRES = 365;
-  var CLE_REPLI = "badasso-calendar:replie";
-  var ATTENTE_MAX = 8000; // détection de l'adhérent : durée totale
-  var ATTENTE_PAS = 400;
+  var DAYS_BEFORE = 30;
+  var DAYS_AFTER = 365;
+  var COLLAPSED_KEY = "badasso-calendar:collapsed";
+  var DETECT_TIMEOUT = 8000; // member detection: total budget
+  var DETECT_INTERVAL = 400;
 
-  // Violet BadAsso. Contraste avec du blanc : 7,7:1.
-  var MARQUE = "#932079";
-  var MARQUE_FONCE = "#7a1a65";
+  // BadAsso brand purple. Contrast against white: 7.7:1.
+  var BRAND = "#932079";
+  var BRAND_DARK = "#7a1a65";
 
-  // Diagnostic : sans ces traces, un bouton absent est indébogable.
-  function tracer(raison) {
-    console.info("[BadAsso] Bouton d'export non affiché — " + raison);
+  // Diagnostics: without these traces, a missing button is undebuggable.
+  function trace(reason) {
+    console.info("[BadAsso] Bouton d'export non affiché — " + reason);
   }
 
-  // core.js est injecté juste avant ; en son absence, on ne fait rien.
+  // core.js is injected right before; if it is missing, do nothing.
   if (!window.BadAsso) {
-    tracer("core.js n'est pas chargé (window.BadAsso absent).");
+    trace("core.js n'est pas chargé (window.BadAsso absent).");
     return;
   }
 
-  // Chrome peut réinjecter un content script (bfcache, navigations internes).
-  if (window.__badassoBoutonPose) return;
-  window.__badassoBoutonPose = true;
+  // Chrome may re-inject a content script (bfcache, in-page navigations).
+  if (window.__badassoButtonMounted) return;
+  window.__badassoButtonMounted = true;
 
   /*
-   * Le bouton ne disparaît jamais complètement : le « × » le replie en une
-   * pastille, qu'un clic redéploie. Un élément qui s'efface sans laisser de
-   * trace laisse l'utilisateur sans moyen de le retrouver.
+   * The button never disappears entirely: the "×" collapses it into a pill
+   * that one click expands again. An element that vanishes without a trace
+   * leaves the user with no way to bring it back.
    *
-   * L'état tient dans localStorage, pour survivre d'une visite à l'autre.
+   * State lives in localStorage, so it survives across visits.
    */
-  function lireRepli() {
+  function readCollapsed() {
     try {
-      return localStorage.getItem(CLE_REPLI) === "1";
+      return localStorage.getItem(COLLAPSED_KEY) === "1";
     } catch (err) {
-      return false; // stockage indisponible : on affiche déployé
+      return false; // storage unavailable: show it expanded
     }
   }
 
-  function ecrireRepli(replie) {
+  function writeCollapsed(collapsed) {
     try {
-      localStorage.setItem(CLE_REPLI, replie ? "1" : "0");
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? "1" : "0");
     } catch (err) {
-      /* sans effet : l'état ne sera pas retenu, le bouton reste utilisable */
+      /* no effect: the state is not remembered, the button still works */
     }
   }
 
   /*
-   * Sur les pages où le planning se charge en AJAX, l'identifiant adhérent
-   * n'est pas encore dans le DOM au moment où le content script s'exécute.
-   * On réessaie donc pendant quelques secondes avant d'abandonner.
+   * On pages where the planning loads over AJAX, the member id is not in the
+   * DOM yet when the content script runs. So retry for a few seconds before
+   * giving up.
    */
-  function attendreAdhId() {
+  function waitForMemberId() {
     return new Promise(function (resolve) {
-      var trouve = window.BadAsso.trouverAdhId();
-      if (trouve) return resolve(trouve);
+      var found = window.BadAsso.findMemberId();
+      if (found) return resolve(found);
 
-      var echeance = Date.now() + ATTENTE_MAX;
-      var minuteur = setInterval(function () {
-        var id = window.BadAsso.trouverAdhId();
-        if (id || Date.now() > echeance) {
-          clearInterval(minuteur);
+      var deadline = Date.now() + DETECT_TIMEOUT;
+      var timer = setInterval(function () {
+        var id = window.BadAsso.findMemberId();
+        if (id || Date.now() > deadline) {
+          clearInterval(timer);
           resolve(id || null);
         }
-      }, ATTENTE_PAS);
+      }, DETECT_INTERVAL);
     });
   }
 
   var STYLE = [
     ":host { all: initial; }",
-    ".bulle {",
+    ".bubble {",
     "  position: fixed; right: 18px; bottom: 18px; z-index: 2147483000;",
     "  display: flex; align-items: stretch; gap: 1px;",
     "  font: 500 13px/1.3 system-ui, -apple-system, 'Segoe UI', sans-serif;",
@@ -95,189 +97,189 @@
     "  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.18), 0 8px 24px rgba(16, 24, 40, 0.16);",
     "}",
     "button {",
-    "  margin: 0; border: 0; background: " + MARQUE + "; color: #fff;",
+    "  margin: 0; border: 0; background: " + BRAND + "; color: #fff;",
     "  font: inherit; cursor: pointer; transition: background 0.12s ease;",
     "}",
-    ".principal { display: flex; align-items: center; gap: 8px; padding: 11px 14px; }",
-    ".principal:hover:not(:disabled) { background: " + MARQUE_FONCE + "; }",
-    ".principal:disabled { cursor: default; opacity: 0.75; }",
-    ".fermer {",
+    ".main { display: flex; align-items: center; gap: 8px; padding: 11px 14px; }",
+    ".main:hover:not(:disabled) { background: " + BRAND_DARK + "; }",
+    ".main:disabled { cursor: default; opacity: 0.75; }",
+    ".collapse {",
     "  width: 26px; padding: 0; font-size: 15px; line-height: 1;",
     "  color: rgba(255, 255, 255, 0.75);",
     "}",
-    ".fermer:hover { background: " + MARQUE_FONCE + "; color: #fff; }",
+    ".collapse:hover { background: " + BRAND_DARK + "; color: #fff; }",
     "button:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }",
     "svg { width: 15px; height: 15px; flex: none; }",
-    // Replié : plus que la pastille, le libellé et la croix s'effacent.
-    ".bulle.replie { border-radius: 999px; }",
-    ".bulle.replie .principal { padding: 10px; }",
-    ".bulle.replie .libelle, .bulle.replie .fermer { display: none; }",
-    ".rotation { animation: tourne 0.9s linear infinite; }",
-    "@keyframes tourne { to { transform: rotate(360deg); } }",
-    ".etat {",
+    // Collapsed: only the pill remains, label and close button fade out.
+    ".bubble.collapsed { border-radius: 999px; }",
+    ".bubble.collapsed .main { padding: 10px; }",
+    ".bubble.collapsed .label, .bubble.collapsed .collapse { display: none; }",
+    ".spin { animation: spin 0.9s linear infinite; }",
+    "@keyframes spin { to { transform: rotate(360deg); } }",
+    ".status {",
     "  position: fixed; right: 18px; bottom: 66px; z-index: 2147483000;",
     "  max-width: 300px; padding: 9px 12px; border-radius: 8px;",
     "  background: #14161a; color: #fff;",
     "  font: 400 12.5px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;",
     "  box-shadow: 0 6px 20px rgba(16, 24, 40, 0.22);",
     "}",
-    ".etat:empty { display: none; }",
-    ".etat.erreur { background: #8f1d16; }",
+    ".status:empty { display: none; }",
+    ".status.error { background: #8f1d16; }",
     "@media (prefers-reduced-motion: reduce) {",
-    "  .rotation { animation: none; }",
+    "  .spin { animation: none; }",
     "  button { transition: none; }",
     "}",
   ].join("\n");
 
-  var FLECHE =
+  var ARROW =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>';
 
-  function poser() {
-    var hote = document.createElement("div");
-    hote.setAttribute("data-badasso-calendar", "");
-    var racine = hote.attachShadow({ mode: "open" });
+  function mount() {
+    var host = document.createElement("div");
+    host.setAttribute("data-badasso-calendar", "");
+    var shadow = host.attachShadow({ mode: "open" });
 
     var style = document.createElement("style");
     style.textContent = STYLE;
 
-    var bulle = document.createElement("div");
-    bulle.className = "bulle";
+    var bubble = document.createElement("div");
+    bubble.className = "bubble";
 
-    var principal = document.createElement("button");
-    principal.className = "principal";
-    principal.type = "button";
-    // Balisage statique, écrit ici : aucune donnée du site n'y transite.
-    principal.innerHTML = FLECHE;
-    var libelle = document.createElement("span");
-    libelle.className = "libelle";
-    libelle.textContent = "Exporter mon planning";
-    principal.append(libelle);
+    var mainButton = document.createElement("button");
+    mainButton.className = "main";
+    mainButton.type = "button";
+    // Static markup, written here: no site data flows through it.
+    mainButton.innerHTML = ARROW;
+    var label = document.createElement("span");
+    label.className = "label";
+    label.textContent = "Exporter mon planning";
+    mainButton.append(label);
 
-    var fermer = document.createElement("button");
-    fermer.className = "fermer";
-    fermer.type = "button";
-    fermer.textContent = "×";
-    fermer.title = "Replier";
-    fermer.setAttribute("aria-label", "Replier le bouton d'export");
+    var collapseButton = document.createElement("button");
+    collapseButton.className = "collapse";
+    collapseButton.type = "button";
+    collapseButton.textContent = "×";
+    collapseButton.title = "Replier";
+    collapseButton.setAttribute("aria-label", "Replier le bouton d'export");
 
-    var etat = document.createElement("div");
-    etat.className = "etat";
-    etat.setAttribute("role", "status");
+    var status = document.createElement("div");
+    status.className = "status";
+    status.setAttribute("role", "status");
 
-    bulle.append(principal, fermer);
-    racine.append(style, etat, bulle);
-    document.body.append(hote);
+    bubble.append(mainButton, collapseButton);
+    shadow.append(style, status, bubble);
+    document.body.append(host);
 
-    var replie = lireRepli();
-    var effacement = null;
+    var collapsed = readCollapsed();
+    var clearTimer = null;
 
-    function appliquerRepli() {
-      bulle.classList.toggle("replie", replie);
-      principal.title = replie ? "Exporter mon planning BadAsso" : "";
-      principal.setAttribute(
+    function applyCollapsed() {
+      bubble.classList.toggle("collapsed", collapsed);
+      mainButton.title = collapsed ? "Exporter mon planning BadAsso" : "";
+      mainButton.setAttribute(
         "aria-label",
-        replie ? "Déplier le bouton d'export du planning" : "Exporter mon planning"
+        collapsed ? "Déplier le bouton d'export du planning" : "Exporter mon planning"
       );
     }
 
-    function dire(texte, erreur, duree) {
-      etat.textContent = texte;
-      etat.classList.toggle("erreur", !!erreur);
-      clearTimeout(effacement);
-      if (duree) {
-        effacement = setTimeout(function () {
-          etat.textContent = "";
-        }, duree);
+    function say(text, isError, duration) {
+      status.textContent = text;
+      status.classList.toggle("error", !!isError);
+      clearTimeout(clearTimer);
+      if (duration) {
+        clearTimer = setTimeout(function () {
+          status.textContent = "";
+        }, duration);
       }
     }
 
-    function occupe(actif) {
-      principal.disabled = actif;
-      principal.querySelector("svg").classList.toggle("rotation", actif);
-      libelle.textContent = actif ? "Récupération…" : "Exporter mon planning";
+    function setBusy(busy) {
+      mainButton.disabled = busy;
+      mainButton.querySelector("svg").classList.toggle("spin", busy);
+      label.textContent = busy ? "Récupération…" : "Exporter mon planning";
     }
 
-    async function exporter() {
-      occupe(true);
-      dire("Récupération de ton planning…");
+    async function exportPlanning() {
+      setBusy(true);
+      say("Récupération de ton planning…");
 
       try {
-        var resultat = await window.BadAsso.collecter(JOURS_AVANT, JOURS_APRES);
+        var result = await window.BadAsso.collect(DAYS_BEFORE, DAYS_AFTER);
 
-        if (!resultat.ok) {
-          dire(resultat.erreur, true, 9000);
+        if (!result.ok) {
+          say(result.error, true, 9000);
           return;
         }
-        if (!resultat.creneaux.length) {
-          dire("Aucun créneau réservé sur la période.", true, 6000);
+        if (!result.slots.length) {
+          say("Aucun créneau réservé sur la période.", true, 6000);
           return;
         }
 
-        var sortie = window.BadAsso.construireIcs(resultat.creneaux);
-        var nb = resultat.creneaux.length - sortie.ignores.length;
-        var nom = window.BadAsso.nomFichier();
+        var output = window.BadAsso.buildIcs(result.slots);
+        var count = result.slots.length - output.skipped.length;
+        var name = window.BadAsso.fileName();
 
         var url = URL.createObjectURL(
-          new Blob([sortie.ics], { type: "text/calendar;charset=utf-8" })
+          new Blob([output.ics], { type: "text/calendar;charset=utf-8" })
         );
-        var lien = document.createElement("a");
-        lien.href = url;
-        lien.download = nom;
-        document.body.append(lien);
-        lien.click();
-        lien.remove();
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        document.body.append(link);
+        link.click();
+        link.remove();
         setTimeout(function () {
           URL.revokeObjectURL(url);
         }, 1000);
 
-        dire(
-          (nb > 1 ? nb + " créneaux exportés" : nb + " créneau exporté") + " — " + nom,
+        say(
+          (count > 1 ? count + " créneaux exportés" : count + " créneau exporté") + " — " + name,
           false,
           6000
         );
       } catch (err) {
-        dire(err && err.message ? err.message : String(err), true, 9000);
+        say(err && err.message ? err.message : String(err), true, 9000);
       } finally {
-        occupe(false);
+        setBusy(false);
       }
     }
 
-    // Replié, le bouton principal sert à redéployer ; déployé, il exporte.
-    principal.addEventListener("click", function () {
-      if (replie) {
-        replie = false;
-        ecrireRepli(false);
-        appliquerRepli();
+    // Collapsed, the main button expands; expanded, it exports.
+    mainButton.addEventListener("click", function () {
+      if (collapsed) {
+        collapsed = false;
+        writeCollapsed(false);
+        applyCollapsed();
         return;
       }
-      exporter();
+      exportPlanning();
     });
 
-    fermer.addEventListener("click", function () {
-      replie = true;
-      ecrireRepli(true);
-      appliquerRepli();
-      dire("Bouton replié. Clique sur la pastille pour le rouvrir.", false, 4000);
+    collapseButton.addEventListener("click", function () {
+      collapsed = true;
+      writeCollapsed(true);
+      applyCollapsed();
+      say("Bouton replié. Clique sur la pastille pour le rouvrir.", false, 4000);
     });
 
-    appliquerRepli();
+    applyCollapsed();
   }
 
-  // Sans identifiant adhérent, l'export ne peut pas aboutir : plutôt que
-  // d'afficher un bouton qui échouera, on s'abstient. Cela restreint de fait
-  // le bouton aux pages où l'utilisateur est connecté.
-  attendreAdhId().then(function (adhId) {
-    if (!adhId) {
-      tracer(
+  // Without a member id the export cannot succeed: rather than showing a
+  // button that will fail, show none. That effectively limits the button to
+  // pages where the user is logged in.
+  waitForMemberId().then(function (memberId) {
+    if (!memberId) {
+      trace(
         "identifiant adhérent introuvable dans cette page après " +
-          ATTENTE_MAX / 1000 +
+          DETECT_TIMEOUT / 1000 +
           " s. Si tu es bien connecté, c'est la détection qu'il faut corriger."
       );
       return;
     }
-    console.debug("[BadAsso] Bouton d'export prêt (adhérent " + adhId + ").");
-    poser();
+    console.debug("[BadAsso] Bouton d'export prêt (adhérent " + memberId + ").");
+    mount();
   });
 })();

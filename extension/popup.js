@@ -1,38 +1,40 @@
 /*
- * Popup de l'extension : déclenche la collecte dans l'onglet BadAsso,
- * construit le fichier .ics et le télécharge.
+ * Extension popup: triggers collection in the BadAsso tab, builds the .ics
+ * file and downloads it.
+ *
+ * User-facing strings stay in French: they are read by club members.
  */
 (function () {
   "use strict";
 
-  var boutonExporter = document.getElementById("exporter");
-  var libelleBouton = document.getElementById("libelle-bouton");
-  var iconeBouton = boutonExporter.querySelector("svg");
-  var sousTitre = document.getElementById("sous-titre");
-  var zoneMessage = document.getElementById("message");
-  var zoneListe = document.getElementById("liste");
+  var exportButton = document.getElementById("export");
+  var buttonLabel = document.getElementById("button-label");
+  var buttonIcon = exportButton.querySelector("svg");
+  var subtitle = document.getElementById("subtitle");
+  var statusBox = document.getElementById("status");
+  var list = document.getElementById("list");
 
-  var PREFERENCES = ["avant", "apres", "rappel"];
+  var SETTINGS = ["before", "after", "reminder"];
 
-  var formatJour = new Intl.DateTimeFormat("fr-FR", {
+  var dayFormatter = new Intl.DateTimeFormat("fr-FR", {
     weekday: "short",
     day: "numeric",
     month: "short",
     timeZone: "UTC",
   });
 
-  function afficher(texte, classe) {
-    zoneMessage.textContent = texte;
-    zoneMessage.className = classe || "";
+  function say(text, kind) {
+    statusBox.textContent = text;
+    statusBox.className = kind || "";
   }
 
-  function enCours(actif) {
-    boutonExporter.disabled = actif;
-    iconeBouton.classList.toggle("rotation", actif);
-    libelleBouton.textContent = actif ? "Récupération…" : "Exporter mon planning";
+  function setBusy(busy) {
+    exportButton.disabled = busy;
+    buttonIcon.classList.toggle("spin", busy);
+    buttonLabel.textContent = busy ? "Récupération…" : "Exporter mon planning";
   }
 
-  function estSurBadAsso(url) {
+  function isBadAsso(url) {
     try {
       return /(^|\.)bad-asso\.fr$/.test(new URL(url).hostname);
     } catch (err) {
@@ -40,84 +42,86 @@
     }
   }
 
-  function decouper(local) {
-    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(local || ""));
-    return m ? { jour: m[1] + "-" + m[2] + "-" + m[3], heure: m[4] + "h" + m[5] } : null;
+  function splitLocal(value) {
+    var match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(value || ""));
+    return match
+      ? { day: match[1] + "-" + match[2] + "-" + match[3], time: match[4] + "h" + match[5] }
+      : null;
   }
 
-  // Les dates arrivent en heure locale sans fuseau. On les relit en UTC pour
-  // les formater : le jour affiché reste ainsi celui du planning, quel que
-  // soit le fuseau de la machine.
-  function libelleJour(cle) {
-    var p = cle.split("-");
-    var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
-    return formatJour.format(d).replace(/\.$/, "");
+  // Dates arrive as local time without a zone. They are read back as UTC for
+  // formatting, so the day shown stays the planning's day whatever the
+  // machine's own time zone.
+  function dayLabel(key) {
+    var parts = key.split("-");
+    var date = new Date(Date.UTC(+parts[0], +parts[1] - 1, +parts[2]));
+    return dayFormatter.format(date).replace(/\.$/, "");
   }
 
-  function listerCreneaux(creneaux) {
-    zoneListe.replaceChildren();
+  function renderSlots(slots) {
+    list.replaceChildren();
 
-    var parJour = new Map();
-    creneaux
+    var byDay = new Map();
+    slots
       .slice()
       .sort(function (a, b) {
         return String(a.start).localeCompare(String(b.start));
       })
-      .forEach(function (c) {
-        var debut = decouper(c.start);
-        if (!debut) return;
-        if (!parJour.has(debut.jour)) parJour.set(debut.jour, []);
-        parJour.get(debut.jour).push(c);
+      .forEach(function (slot) {
+        var start = splitLocal(slot.start);
+        if (!start) return;
+        if (!byDay.has(start.day)) byDay.set(start.day, []);
+        byDay.get(start.day).push(slot);
       });
 
-    parJour.forEach(function (duJour, cle) {
-      var entete = document.createElement("div");
-      entete.className = "jour";
-      entete.textContent = libelleJour(cle);
-      zoneListe.append(entete);
+    byDay.forEach(function (daySlots, key) {
+      var header = document.createElement("div");
+      header.className = "day";
+      header.textContent = dayLabel(key);
+      list.append(header);
 
-      duJour.forEach(function (c) {
-        var debut = decouper(c.start);
-        var fin = decouper(c.end);
+      daySlots.forEach(function (slot) {
+        var start = splitLocal(slot.start);
+        var end = splitLocal(slot.end);
 
-        var ligne = document.createElement("div");
-        ligne.className = "creneau";
+        var row = document.createElement("div");
+        row.className = "slot";
 
-        var barre = document.createElement("span");
-        barre.className = "barre";
-        var teinte = c.loc_color || c.backgroundColor || c.color;
-        if (/^#[0-9a-f]{6}$/i.test(String(teinte || ""))) barre.style.background = teinte;
-        ligne.append(barre);
+        var bar = document.createElement("span");
+        bar.className = "bar";
+        var tint = slot.loc_color || slot.backgroundColor || slot.color;
+        if (/^#[0-9a-f]{6}$/i.test(String(tint || ""))) bar.style.background = tint;
+        row.append(bar);
 
-        var corps = document.createElement("div");
-        corps.className = "corps";
+        var body = document.createElement("div");
+        body.className = "body";
 
-        var titre = document.createElement("div");
-        var heure = document.createElement("span");
-        heure.className = "heure";
-        heure.textContent = debut.heure + (fin ? "–" + fin.heure : "");
-        var nom = document.createElement("span");
-        nom.className = "nom";
-        nom.textContent = c.name || "";
-        titre.append(heure, nom);
+        var title = document.createElement("div");
+        var time = document.createElement("span");
+        time.className = "time";
+        time.textContent = start.time + (end ? "–" + end.time : "");
+        var name = document.createElement("span");
+        name.className = "name";
+        name.textContent = slot.name || "";
+        title.append(time, name);
 
-        var lieu = document.createElement("div");
-        lieu.className = "lieu";
-        lieu.textContent = c.loc_name || "";
+        var place = document.createElement("div");
+        place.className = "place";
+        place.textContent = slot.loc_name || "";
 
-        corps.append(titre, lieu);
-        ligne.append(corps);
-        zoneListe.append(ligne);
+        body.append(title, place);
+        row.append(body);
+        list.append(row);
       });
     });
   }
 
-  function telecharger(ics, nom) {
+  function download(ics, name) {
     var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
     var url = URL.createObjectURL(blob);
     return new Promise(function (resolve, reject) {
-      chrome.downloads.download({ url: url, filename: nom, saveAs: false }, function (id) {
-        // Le blob doit rester vivant jusqu'à ce que le téléchargement démarre.
+      chrome.downloads.download({ url: url, filename: name, saveAs: false }, function (id) {
+        // The blob must stay alive until the download actually starts.
         setTimeout(function () {
           URL.revokeObjectURL(url);
         }, 20000);
@@ -127,90 +131,91 @@
     });
   }
 
-  async function exporter() {
-    enCours(true);
-    zoneListe.replaceChildren();
-    afficher("Récupération de ton planning…", "attente");
+  async function exportPlanning() {
+    setBusy(true);
+    list.replaceChildren();
+    say("Récupération de ton planning…", "pending");
 
     try {
-      var onglets = await chrome.tabs.query({ active: true, currentWindow: true });
-      var onglet = onglets[0];
+      var tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      var tab = tabs[0];
 
-      if (!onglet || !estSurBadAsso(onglet.url)) {
-        afficher(
+      if (!tab || !isBadAsso(tab.url)) {
+        say(
           "Ouvre d'abord bad-asso.fr dans cet onglet, connecte-toi, puis relance l'export.",
-          "erreur"
+          "error"
         );
         return;
       }
 
-      var avant = Math.max(0, parseInt(document.getElementById("avant").value, 10) || 0);
-      var apres = Math.max(1, parseInt(document.getElementById("apres").value, 10) || 365);
-      var rappel = parseInt(document.getElementById("rappel").value, 10) || 0;
+      var before = Math.max(0, parseInt(document.getElementById("before").value, 10) || 0);
+      var after = Math.max(1, parseInt(document.getElementById("after").value, 10) || 365);
+      var reminder = parseInt(document.getElementById("reminder").value, 10) || 0;
 
-      // La collecte tourne dans le monde MAIN : la requête part alors de la
-      // page elle-même, donc avec son cookie de session. Depuis le monde
-      // isolé d'un content script, le cookie PHPSESSID ne serait pas joint.
+      // Collection runs in the MAIN world: the request then leaves from the
+      // page itself, carrying its session cookie. From a content script's
+      // isolated world, the PHPSESSID cookie would not be attached.
       await chrome.scripting.executeScript({
-        target: { tabId: onglet.id },
+        target: { tabId: tab.id },
         world: "MAIN",
         files: ["core.js"],
       });
 
-      var resultats = await chrome.scripting.executeScript({
-        target: { tabId: onglet.id },
+      var results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
         world: "MAIN",
         func: function (a, b) {
-          return window.BadAsso.collecter(a, b);
+          return window.BadAsso.collect(a, b);
         },
-        args: [avant, apres],
+        args: [before, after],
       });
 
-      var resultat = resultats && resultats[0] && resultats[0].result;
-      if (!resultat) {
-        afficher("Aucune réponse de la page. Recharge bad-asso.fr et réessaie.", "erreur");
+      var result = results && results[0] && results[0].result;
+      if (!result) {
+        say("Aucune réponse de la page. Recharge bad-asso.fr et réessaie.", "error");
         return;
       }
-      if (!resultat.ok) {
-        afficher(resultat.erreur, "erreur");
+      if (!result.ok) {
+        say(result.error, "error");
         return;
       }
-      if (!resultat.creneaux.length) {
-        afficher("Aucun créneau réservé sur cette période.", "erreur");
+      if (!result.slots.length) {
+        say("Aucun créneau réservé sur cette période.", "error");
         return;
       }
 
-      var sortie = BadAsso.construireIcs(resultat.creneaux, { rappelMinutes: rappel });
-      await telecharger(sortie.ics, BadAsso.nomFichier());
+      var output = BadAsso.buildIcs(result.slots, { reminderMinutes: reminder });
+      await download(output.ics, BadAsso.fileName());
 
-      var nb = resultat.creneaux.length - sortie.ignores.length;
-      var texte = nb > 1 ? nb + " créneaux exportés" : nb + " créneau exporté";
-      if (sortie.ignores.length) {
-        texte += ", " + sortie.ignores.length + " ignoré(s) (dates illisibles)";
+      var count = result.slots.length - output.skipped.length;
+      var text = count > 1 ? count + " créneaux exportés" : count + " créneau exporté";
+      if (output.skipped.length) {
+        text += ", " + output.skipped.length + " ignoré(s) (dates illisibles)";
       }
-      afficher(texte + ".", "succes");
-      sousTitre.textContent = nb > 1 ? nb + " créneaux réservés" : nb + " créneau réservé";
-      listerCreneaux(resultat.creneaux);
+      say(text + ".", "success");
+      subtitle.textContent =
+        count > 1 ? count + " créneaux réservés" : count + " créneau réservé";
+      renderSlots(result.slots);
     } catch (err) {
-      afficher(err && err.message ? err.message : String(err), "erreur");
+      say(err && err.message ? err.message : String(err), "error");
     } finally {
-      enCours(false);
+      setBusy(false);
     }
   }
 
-  async function restaurerPreferences() {
-    var stockees = await chrome.storage.local.get(PREFERENCES);
-    PREFERENCES.forEach(function (cle) {
-      if (stockees[cle] != null) document.getElementById(cle).value = stockees[cle];
+  async function restoreSettings() {
+    var stored = await chrome.storage.local.get(SETTINGS);
+    SETTINGS.forEach(function (key) {
+      if (stored[key] != null) document.getElementById(key).value = stored[key];
     });
   }
 
-  PREFERENCES.forEach(function (cle) {
-    document.getElementById(cle).addEventListener("change", function (e) {
-      chrome.storage.local.set({ [cle]: e.target.value });
+  SETTINGS.forEach(function (key) {
+    document.getElementById(key).addEventListener("change", function (event) {
+      chrome.storage.local.set({ [key]: event.target.value });
     });
   });
 
-  boutonExporter.addEventListener("click", exporter);
-  restaurerPreferences();
+  exportButton.addEventListener("click", exportPlanning);
+  restoreSettings();
 })();

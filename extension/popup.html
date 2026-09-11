@@ -4,46 +4,48 @@
     <meta charset="utf-8" />
     <title>Exporter mon planning BadAsso</title>
     <style>
+      /* Identifiers in English, user-facing text in French: the popup is read
+         by French-speaking club members. */
       :root {
         color-scheme: light dark;
 
-        --fond: #ffffff;
-        --fond-doux: #f6f7f9;
-        --fond-appui: #eef0f4;
-        --texte: #14161a;
-        --texte-doux: #5c636e;
-        --texte-tenu: #868d98;
-        --bordure: #e4e7ec;
-        --bordure-nette: #d3d8e0;
+        --bg: #ffffff;
+        --bg-soft: #f6f7f9;
+        --bg-raised: #eef0f4;
+        --text: #14161a;
+        --text-soft: #5c636e;
+        --text-faint: #868d98;
+        --border: #e4e7ec;
+        --border-strong: #d3d8e0;
         --accent: #932079;
-        --accent-fonce: #7a1a65;
-        --accent-texte: #ffffff;
-        --erreur: #b3261e;
-        --erreur-fond: #fdeceb;
-        --succes: #18693a;
-        --succes-fond: #e8f5ed;
+        --accent-dark: #7a1a65;
+        --accent-text: #ffffff;
+        --error: #b3261e;
+        --error-bg: #fdeceb;
+        --success: #18693a;
+        --success-bg: #e8f5ed;
 
-        --rayon: 10px;
-        --rayon-petit: 7px;
+        --radius: 10px;
+        --radius-small: 7px;
       }
 
       @media (prefers-color-scheme: dark) {
         :root {
-          --fond: #1b1d22;
-          --fond-doux: #22252b;
-          --fond-appui: #2a2e35;
-          --texte: #f1f3f5;
-          --texte-doux: #a7aeb9;
-          --texte-tenu: #7e8794;
-          --bordure: #32363d;
-          --bordure-nette: #3f444c;
+          --bg: #1b1d22;
+          --bg-soft: #22252b;
+          --bg-raised: #2a2e35;
+          --text: #f1f3f5;
+          --text-soft: #a7aeb9;
+          --text-faint: #7e8794;
+          --border: #32363d;
+          --border-strong: #3f444c;
           --accent: #e48ecd;
-          --accent-fonce: #efa8da;
-          --accent-texte: #1a0714;
-          --erreur: #f2b8b5;
-          --erreur-fond: #3b1f1e;
-          --succes: #86dca8;
-          --succes-fond: #16301f;
+          --accent-dark: #efa8da;
+          --accent-text: #1a0714;
+          --error: #f2b8b5;
+          --error-bg: #3b1f1e;
+          --success: #86dca8;
+          --success-bg: #16301f;
         }
       }
 
@@ -54,8 +56,8 @@
       body {
         width: 344px;
         margin: 0;
-        background: var(--fond);
-        color: var(--texte);
+        background: var(--bg);
+        color: var(--text);
         font:
           13px/1.45 system-ui,
           -apple-system,
@@ -64,42 +66,42 @@
         -webkit-font-smoothing: antialiased;
       }
 
-      /* ------------------------------------------------------------ entête */
+      /* ------------------------------------------------------------ header */
 
-      .entete {
+      .header {
         display: flex;
         align-items: center;
         gap: 10px;
         padding: 14px 16px;
-        border-bottom: 1px solid var(--bordure);
+        border-bottom: 1px solid var(--border);
       }
 
-      .entete svg {
+      .header svg {
         flex: none;
         width: 30px;
         height: 30px;
       }
 
-      .entete h1 {
+      .header h1 {
         margin: 0;
         font-size: 14px;
         font-weight: 600;
         letter-spacing: -0.01em;
       }
 
-      .entete p {
+      .header p {
         margin: 1px 0 0;
-        color: var(--texte-doux);
+        color: var(--text-soft);
         font-size: 11.5px;
       }
 
-      /* ----------------------------------------------------------- réglages */
+      /* ---------------------------------------------------------- settings */
 
-      .reglages {
+      .settings {
         padding: 12px 16px 14px;
       }
 
-      .rangee {
+      .row {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -107,30 +109,30 @@
         min-height: 30px;
       }
 
-      .rangee + .rangee {
+      .row + .row {
         margin-top: 6px;
       }
 
-      .rangee > label {
-        color: var(--texte-doux);
+      .row > label {
+        color: var(--text-soft);
         font-size: 12px;
       }
 
-      .duo {
+      .pair {
         display: flex;
         gap: 6px;
       }
 
-      .encart {
+      .field {
         position: relative;
         display: flex;
         align-items: center;
       }
 
-      .encart .unite {
+      .field .unit {
         position: absolute;
         right: 8px;
-        color: var(--texte-tenu);
+        color: var(--text-faint);
         font-size: 11px;
         pointer-events: none;
       }
@@ -138,10 +140,10 @@
       input[type="number"] {
         width: 74px;
         padding: 5px 26px 5px 8px;
-        border: 1px solid var(--bordure-nette);
-        border-radius: var(--rayon-petit);
-        background: var(--fond);
-        color: var(--texte);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-small);
+        background: var(--bg);
+        color: var(--text);
         font: inherit;
         font-size: 12px;
         font-variant-numeric: tabular-nums;
@@ -156,10 +158,10 @@
 
       select {
         padding: 5px 8px;
-        border: 1px solid var(--bordure-nette);
-        border-radius: var(--rayon-petit);
-        background: var(--fond);
-        color: var(--texte);
+        border: 1px solid var(--border-strong);
+        border-radius: var(--radius-small);
+        background: var(--bg);
+        color: var(--text);
         font: inherit;
         font-size: 12px;
       }
@@ -171,7 +173,7 @@
         outline-offset: 1px;
       }
 
-      /* ------------------------------------------------------------ bouton */
+      /* ------------------------------------------------------------ button */
 
       .actions {
         padding: 0 16px 14px;
@@ -185,9 +187,9 @@
         width: 100%;
         padding: 10px 12px;
         border: 0;
-        border-radius: var(--rayon);
+        border-radius: var(--radius);
         background: var(--accent);
-        color: var(--accent-texte);
+        color: var(--accent-text);
         font: inherit;
         font-size: 13px;
         font-weight: 600;
@@ -196,7 +198,7 @@
       }
 
       button:hover:not(:disabled) {
-        background: var(--accent-fonce);
+        background: var(--accent-dark);
       }
 
       button:disabled {
@@ -209,18 +211,18 @@
         height: 15px;
       }
 
-      .rotation {
-        animation: rotation 0.9s linear infinite;
+      .spin {
+        animation: spin 0.9s linear infinite;
       }
 
-      @keyframes rotation {
+      @keyframes spin {
         to {
           transform: rotate(360deg);
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
-        .rotation {
+        .spin {
           animation: none;
         }
         button {
@@ -228,93 +230,93 @@
         }
       }
 
-      /* ----------------------------------------------------------- message */
+      /* ------------------------------------------------------------ status */
 
-      #message {
+      #status {
         margin: 0 16px 14px;
         padding: 9px 11px;
-        border-radius: var(--rayon-petit);
+        border-radius: var(--radius-small);
         font-size: 12px;
       }
 
-      #message:empty {
+      #status:empty {
         display: none;
       }
 
-      #message.erreur {
-        background: var(--erreur-fond);
-        color: var(--erreur);
+      #status.error {
+        background: var(--error-bg);
+        color: var(--error);
       }
 
-      #message.succes {
-        background: var(--succes-fond);
-        color: var(--succes);
+      #status.success {
+        background: var(--success-bg);
+        color: var(--success);
       }
 
-      #message.attente {
-        background: var(--fond-doux);
-        color: var(--texte-doux);
+      #status.pending {
+        background: var(--bg-soft);
+        color: var(--text-soft);
       }
 
-      /* ------------------------------------------------------------- liste */
+      /* -------------------------------------------------------------- list */
 
-      #liste {
+      #list {
         max-height: 264px;
         overflow-y: auto;
-        border-top: 1px solid var(--bordure);
-        background: var(--fond-doux);
+        border-top: 1px solid var(--border);
+        background: var(--bg-soft);
       }
 
-      #liste:empty {
+      #list:empty {
         display: none;
       }
 
-      .jour {
+      .day {
         position: sticky;
         top: 0;
         padding: 8px 16px 4px;
-        background: var(--fond-doux);
-        color: var(--texte-tenu);
+        background: var(--bg-soft);
+        color: var(--text-faint);
         font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.06em;
       }
 
-      .creneau {
+      .slot {
         display: flex;
         gap: 10px;
         padding: 6px 16px 8px;
       }
 
-      .creneau .barre {
+      .slot .bar {
         flex: none;
         width: 3px;
         border-radius: 2px;
-        background: var(--bordure-nette);
+        background: var(--border-strong);
       }
 
-      .creneau .corps {
+      .slot .body {
         min-width: 0;
       }
 
-      .creneau .heure {
-        color: var(--texte);
+      .slot .time {
+        color: var(--text);
         font-size: 12px;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
       }
 
-      .creneau .nom {
+      .slot .name {
         margin-left: 6px;
-        color: var(--texte);
+        color: var(--text);
         font-size: 12px;
       }
 
-      .creneau .lieu {
+      .slot .place {
         margin-top: 1px;
         overflow: hidden;
-        color: var(--texte-doux);
+        color: var(--text-soft);
         font-size: 11.5px;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -322,10 +324,10 @@
     </style>
   </head>
   <body>
-    <header class="entete">
+    <header class="header">
       <svg viewBox="0 0 100 100" aria-hidden="true">
-        <!-- Couleurs figées, et non les jetons de thème : l'en-tête doit rester
-             identique à l'icône de la barre d'outils, qui ne s'inverse pas. -->
+        <!-- Fixed colors rather than theme tokens: the header must stay
+             identical to the toolbar icon, which does not invert. -->
         <rect width="100" height="100" rx="22" fill="#932079" />
         <path d="M19 13 H81 L65.5 62 H34.5 Z" fill="#ffffff" />
         <path d="M50 62 V13 M42 62 L30 13 M58 62 L70 13" stroke="#932079" stroke-width="1.7" />
@@ -333,27 +335,27 @@
       </svg>
       <div>
         <h1>Mon planning badminton</h1>
-        <p id="sous-titre">Créneaux réservés au format .ics</p>
+        <p id="subtitle">Créneaux réservés au format .ics</p>
       </div>
     </header>
 
-    <section class="reglages">
-      <div class="rangee">
-        <label for="avant">Période</label>
-        <div class="duo">
-          <span class="encart">
-            <input id="avant" type="number" min="0" max="365" step="1" value="30" />
-            <span class="unite">j&nbsp;←</span>
+    <section class="settings">
+      <div class="row">
+        <label for="before">Période</label>
+        <div class="pair">
+          <span class="field">
+            <input id="before" type="number" min="0" max="365" step="1" value="30" />
+            <span class="unit">j&nbsp;←</span>
           </span>
-          <span class="encart">
-            <input id="apres" type="number" min="1" max="730" step="1" value="365" />
-            <span class="unite">j&nbsp;→</span>
+          <span class="field">
+            <input id="after" type="number" min="1" max="730" step="1" value="365" />
+            <span class="unit">j&nbsp;→</span>
           </span>
         </div>
       </div>
-      <div class="rangee">
-        <label for="rappel">Rappel</label>
-        <select id="rappel">
+      <div class="row">
+        <label for="reminder">Rappel</label>
+        <select id="reminder">
           <option value="0">Aucun</option>
           <option value="30">30 min avant</option>
           <option value="60">1 h avant</option>
@@ -364,19 +366,19 @@
     </section>
 
     <div class="actions">
-      <button id="exporter">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+      <button id="export">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M12 3v12" />
           <path d="m7 11 5 5 5-5" />
           <path d="M4 20h16" />
         </svg>
-        <span id="libelle-bouton">Exporter mon planning</span>
+        <span id="button-label">Exporter mon planning</span>
       </button>
     </div>
 
-    <div id="message" role="status"></div>
-    <div id="liste"></div>
+    <div id="status" role="status"></div>
+    <div id="list"></div>
 
     <script src="core.js"></script>
     <script src="popup.js"></script>

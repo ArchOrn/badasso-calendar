@@ -121,6 +121,13 @@ qui le restreint de fait aux pages où l'utilisateur est connecté.
 
 ---
 
+## Conventions
+
+Le code — identifiants et commentaires — est en **anglais**. Les textes
+**affichés** restent en **français** : interface de la popup, messages du
+bouton flottant, messages console du script à coller. Ils s'adressent aux
+membres du club. Cette documentation aussi.
+
 ## Organisation du code
 
 ```
@@ -153,7 +160,7 @@ node test/test-ics.js
 des UID, échappement RFC 5545, pliage des lignes à 75 **octets** sans couper un
 caractère accentué en deux, rappels `VALARM`, couleurs, et cohérence du bundle.
 
-Le jeu de données `test/planning-reel.json` provient d'une réponse réelle de
+Le jeu de données `test/real-planning.json` provient d'une réponse réelle de
 l'endpoint, réduite aux champs effectivement consommés. La sortie a également
 été validée avec la bibliothèque Python `icalendar`.
 
@@ -178,7 +185,7 @@ Google Calendar ignore largement la couleur par évènement.
 L'interface reprend le violet de la charte BadAsso, `#932079` — contraste de
 7,7:1 avec du texte blanc, donc confortablement au-dessus du seuil AA. Il est
 défini à trois endroits, à tenir synchronisés : les jetons `--accent` de
-`popup.html`, les constantes `MARQUE` de `inpage.js`, et `ACCENT` dans
+`popup.html`, les constantes `BRAND` de `inpage.js`, et `ACCENT` dans
 `tools/make-icons.py`.
 
 Les couleurs par créneau, elles, viennent de l'API et désignent le gymnase.
