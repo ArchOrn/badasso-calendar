@@ -217,6 +217,11 @@ l'extension affiche réellement.
 
 `dist/` n'est pas versionné : tout s'y régénère.
 
+## Licence
+
+MIT — voir [LICENSE](LICENSE). Projet indépendant, sans lien avec l'éditeur de
+BadAsso.
+
 ## Limites connues
 
 - L'export est manuel : pas de synchronisation automatique. Un abonnement ICS
