@@ -204,8 +204,13 @@ python3 tools/make-icons.py
 ```
 
 Le script assemble les PNG à la main (zlib + CRC), sans dépendance, avec un
-suréchantillonnage 4x pour lisser les bords. Les fichiers produits sont
-versionnés : ne relancer qu'en cas de changement du dessin.
+suréchantillonnage 4x pour lisser les bords. Les icônes de l'extension sont
+versionnées : ne relancer qu'en cas de changement du dessin.
+
+Il produit en plus `dist/store/icon-store-128.png`, l'icône de la fiche du
+store, qui obéit à une règle différente : 96×96 d'œuvre centrée dans 128×128,
+avec 16 px transparents de chaque côté. Celle de la barre d'outils remplit au
+contraire son canevas bord à bord.
 
 ## Publication
 

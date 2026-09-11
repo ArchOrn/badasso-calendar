@@ -90,8 +90,12 @@ def color_at(x, y, with_ribs):
     return WHITE + (255,)
 
 
-def render(size):
-    with_ribs = size >= 32
+def render(size, inset=0.0):
+    """Render at `size` px. `inset` is the transparent margin on each side, as
+    a fraction of the canvas: the Web Store listing icon wants 96x96 of artwork
+    centered in 128x128, i.e. an inset of 16/128."""
+    with_ribs = size * (1 - 2 * inset) >= 32
+    span = 1 - 2 * inset
     rows = bytearray()
     for py in range(size):
         rows.append(0)  # PNG filter type: none
@@ -100,8 +104,10 @@ def render(size):
             red = green = blue = alpha = 0
             for sy in range(SUPERSAMPLE):
                 for sx in range(SUPERSAMPLE):
-                    nx = (px + (sx + 0.5) / SUPERSAMPLE) / size
-                    ny = (py + (sy + 0.5) / SUPERSAMPLE) / size
+                    nx = ((px + (sx + 0.5) / SUPERSAMPLE) / size - inset) / span
+                    ny = ((py + (sy + 0.5) / SUPERSAMPLE) / size - inset) / span
+                    if not (0 <= nx <= 1 and 0 <= ny <= 1):
+                        continue  # transparent padding
                     cr, cg, cb, ca = color_at(nx, ny, with_ribs)
                     # Premultiplied: without it, transparent (black) pixels
                     # would darken the rim of the rounded corners.
@@ -140,6 +146,15 @@ def main():
         path = OUTPUT / f"icon-{size}.png"
         write_png(path, size, render(size))
         print(f"  {path.relative_to(OUTPUT.parent.parent)}  ({path.stat().st_size} bytes)")
+
+    # Store listing icon: the Web Store asks for 96x96 of artwork centered in a
+    # 128x128 canvas, the remaining 16 px per side left transparent. The
+    # toolbar icons, by contrast, fill their canvas edge to edge.
+    store = OUTPUT.parent.parent / "dist" / "store"
+    store.mkdir(parents=True, exist_ok=True)
+    path = store / "icon-store-128.png"
+    write_png(path, 128, render(128, inset=16 / 128))
+    print(f"  {path.relative_to(OUTPUT.parent.parent)}  ({path.stat().st_size} bytes)")
 
 
 if __name__ == "__main__":

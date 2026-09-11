@@ -135,7 +135,12 @@ Générées par `node tools/screenshots.js` dans `dist/store/` :
 | --- | --- | --- |
 | `screenshot-1.png` | 1280×800 | Le bouton sur une page BadAsso |
 | `screenshot-2.png` | 1280×800 | La popup et la liste des créneaux |
-| `icon-128.png` | 128×128 | Icône de la fiche (dans `extension/icons/`) |
+| `icon-store-128.png` | 128×128 | **Icône de la fiche** — générée par `python3 tools/make-icons.py` |
+
+⚠️ L'icône de la fiche n'est **pas** `extension/icons/icon-128.png`. Le store
+attend 96×96 d'œuvre centrée dans un canevas de 128×128, les 16 px restants de
+chaque côté laissés transparents. L'icône de la barre d'outils, elle, remplit
+son canevas bord à bord. D'où deux fichiers distincts, issus du même dessin.
 
 La petite image promotionnelle 440×280 est facultative tant que l'extension
 n'est pas mise en avant.
