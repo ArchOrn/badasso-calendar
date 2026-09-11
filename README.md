@@ -200,6 +200,23 @@ Le script assemble les PNG à la main (zlib + CRC), sans dépendance, avec un
 suréchantillonnage 4x pour lisser les bords. Les fichiers produits sont
 versionnés : ne relancer qu'en cas de changement du dessin.
 
+## Publication
+
+```sh
+./tools/package.sh        # -> dist/badasso-calendar-<version>.zip
+node tools/screenshots.js # -> dist/store/screenshot-{1,2}.png (1280x800)
+```
+
+`STORE.md` contient les textes de la fiche, prêts à coller, ainsi que les
+justifications de permissions et les déclarations sur les données. `PRIVACY.md`
+est la politique de confidentialité, dont le tableau de bord demande l'URL.
+
+Les captures sont rendues depuis les vraies sources de l'extension, avec les
+API `chrome.*` bouchonnées : elles ne peuvent pas s'écarter de ce que
+l'extension affiche réellement.
+
+`dist/` n'est pas versionné : tout s'y régénère.
+
 ## Limites connues
 
 - L'export est manuel : pas de synchronisation automatique. Un abonnement ICS
